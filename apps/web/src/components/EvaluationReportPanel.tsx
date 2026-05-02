@@ -26,7 +26,7 @@ const SCORE_ITEMS: ScoreItem[] = [
   { key: "logoText", label: "Logo/文字", hint: "Logo、型号、仪表盘文字是否可信" },
   { key: "material", label: "材质真实感", hint: "金属、塑料、橡胶、漆面是否自然" },
   { key: "color", label: "颜色一致性", hint: "品牌色、阴影、曝光是否偏移" },
-  { key: "usability", label: "可用性", hint: "是否能进入内部初稿或评审流程" }
+  { key: "usability", label: "可用性", hint: "是否能进入初稿或评审流程" }
 ];
 
 const DEFAULT_SCORES: EvaluationScores = {
@@ -161,7 +161,7 @@ export function EvaluationReportPanel({ job, onSubmitted }: Props) {
 
       <div className="field compact-field">
         <label>
-          <input type="checkbox" checked={usable} onChange={(event) => setUsable(event.target.checked)} /> 可进入内部初稿或评审流程
+          <input type="checkbox" checked={usable} onChange={(event) => setUsable(event.target.checked)} /> 可进入初稿或评审流程
         </label>
       </div>
 

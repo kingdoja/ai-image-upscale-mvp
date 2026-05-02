@@ -42,7 +42,7 @@ def create_job(
     scale: int,
     mode: str,
     scene: str = "product",
-    uploader_id: str = "internal-user",
+    uploader_id: str = "local-user",
 ) -> Job:
     _validate_job_options(scale, mode, scene)
     job_id = new_id("up")
@@ -75,7 +75,7 @@ def create_batch_jobs(
     scale: int,
     mode: str,
     scene: str = "product",
-    uploader_id: str = "internal-user",
+    uploader_id: str = "local-user",
 ) -> Tuple[str, List[Job]]:
     if not images:
         raise HTTPException(status_code=422, detail="at least one image is required")
@@ -244,7 +244,7 @@ def render_evaluation_report_markdown(report: dict) -> str:
             "|---|---|---|---|---|---:|---|---|",
             *row_lines,
             "",
-            "> 本报告仅供内部评测和训练数据复盘使用，含 Logo/文字/型号/仪表盘区域的样本需人工复核。",
+            "> 本报告仅供本地评测和训练数据复盘使用，含 Logo/文字/型号/仪表盘区域的样本需人工复核。",
             "",
         ]
     )
@@ -363,7 +363,7 @@ def build_batch_risk_samples(db: Session, batch_id: str) -> dict:
 def render_risk_samples_csv(report: dict) -> str:
     output = StringIO()
     writer = csv.writer(output, lineterminator="\n")
-    writer.writerow(["仅供内部训练/评估使用，不上传第三方公共服务"])
+    writer.writerow(["仅供本地训练/评估使用，不上传第三方公共服务"])
     writer.writerow(
         [
             "job_id",
@@ -417,7 +417,7 @@ def render_risk_samples_markdown(report: dict) -> str:
             f"# 失败/高风险样本清单 - {report['batch_id']}",
             "",
             f"- 风险样本数: {report['sample_count']}",
-            "- 仅供内部训练/评估使用，不上传第三方公共服务。",
+            "- 仅供本地训练/评估使用，不上传第三方公共服务。",
             "- 重点复核：Logo/文字错误、产品结构变形、材质异常、颜色偏移。",
             "",
             "| Job ID | 状态 | 风险 | 问题标签 | 风险原因 | 建议动作 |",

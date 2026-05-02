@@ -15,21 +15,25 @@ dist/
 .env
 logs/
 
-# Company/internal review materials stay local and should not be pushed to GitHub.
-docs/archive/company-review/
+# Private review materials stay local and should not be pushed to GitHub.
+docs/archive/review-materials/
 docs/specs/
 docs/plans/
 docs/acceptance/
 docs/demo/
+docs/archive/
 tests/acceptance/*.md
 tools/enrich_review_docx.py
-tools/generate_company_docx.py
-tools/generate_ninebot_training_solution.py
+tools/generate_docx.py
+tools/generate_training_solution.py
+tools/generate_*docx.py
+tools/generate_*training_solution.py
 tools/polish_training_solution_docx.py
+tools/polish_training_docx_layout.py
 tools/refine_review_docx.py
 tools/refine_review_md.py
 tools/sync_alignment_docx.py
 tools/visualize_docx_diagrams.py
-tools/*company*docx*.py
+tools/apply_*review*docx.py
 tools/*review*docx*.py
 tools/*polish*docx*.py

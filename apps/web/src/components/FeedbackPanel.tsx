@@ -63,7 +63,7 @@ export function FeedbackPanel({ job, onSubmitted }: { job: JobRead | null; onSub
           </div>
           <div className="field">
             <label>
-              <input type="checkbox" checked={usable} onChange={(event) => setUsable(event.target.checked)} /> 可用于内部初稿
+              <input type="checkbox" checked={usable} onChange={(event) => setUsable(event.target.checked)} /> 可用于初稿
             </label>
           </div>
           <div className="field">

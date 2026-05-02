@@ -1,1 +1,1 @@
-"""Ninebot upscale API package."""
+"""AI image upscaling API package."""

@@ -30,7 +30,7 @@ class Job(Base, JsonListMixin):
     __tablename__ = "jobs"
 
     id = Column(String(64), primary_key=True, default=lambda: new_id("up"))
-    uploader_id = Column(String(128), nullable=False, default="internal-user")
+    uploader_id = Column(String(128), nullable=False, default="local-user")
     original_file_path = Column(String(1024), nullable=False)
     original_hash = Column(String(128), nullable=False, index=True)
     scale = Column(Integer, nullable=False)

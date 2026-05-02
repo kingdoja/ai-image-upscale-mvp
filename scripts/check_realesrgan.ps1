@@ -18,7 +18,7 @@ if (-not (Test-Path -LiteralPath $Executable)) {
 
 $root = Resolve-Path "."
 if ($WorkDir -eq "") {
-    $WorkDir = Join-Path $env:TEMP "ninebot-realesrgan-check"
+    $WorkDir = Join-Path $env:TEMP "ai-upscale-realesrgan-check"
 }
 $checkDir = $WorkDir
 New-Item -ItemType Directory -Force -Path $checkDir | Out-Null

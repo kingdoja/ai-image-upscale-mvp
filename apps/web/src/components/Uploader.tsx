@@ -55,7 +55,7 @@ export function Uploader({ preview, onPreviewChanged, onCreated, onError }: Prop
       <div className="panel-heading">
         <div>
           <h2 className="section-title">上传图片</h2>
-          <p className="subtle">支持 JPG、PNG、WebP。公司评审建议先使用已授权、非涉密素材。</p>
+          <p className="subtle">支持 JPG、PNG、WebP。建议先使用已授权、非敏感素材。</p>
         </div>
         <span className="panel-icon">
           <Upload size={18} />

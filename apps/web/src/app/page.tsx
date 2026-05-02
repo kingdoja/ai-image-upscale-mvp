@@ -52,7 +52,7 @@ const viewMeta: Record<ViewName, { title: string; subtitle: string }> = {
   },
   batch: {
     title: "批量处理",
-    subtitle: "一次上传多张图片生成独立任务，适合内部评审前的小批量验证。"
+    subtitle: "一次上传多张图片生成独立任务，适合正式评审前的小批量验证。"
   },
   evaluation: {
     title: "评测说明",
@@ -89,7 +89,7 @@ export default function Page() {
   }
 
   async function selectHistoryJob(jobId: string) {
-    window.localStorage.setItem("ninebot-upscale-last-job-id", jobId);
+    window.localStorage.setItem("ai-upscale-last-job-id", jobId);
     await refreshJob(jobId);
     setPreview(null);
     setView("history");
@@ -99,7 +99,7 @@ export default function Page() {
     setMessage(`正在处理历史任务：${jobId}`);
     const processed = await processJob(jobId);
     setJob(processed);
-    window.localStorage.setItem("ninebot-upscale-last-job-id", jobId);
+    window.localStorage.setItem("ai-upscale-last-job-id", jobId);
     setPreview(null);
     await refreshHistory();
     setMessage(`任务状态：${statusLabel(processed.status)}`);
@@ -110,20 +110,20 @@ export default function Page() {
     setMessage(`正在处理任务：${jobId}`);
     const processed = await processJob(jobId);
     setJob(processed);
-    window.localStorage.setItem("ninebot-upscale-last-job-id", jobId);
+    window.localStorage.setItem("ai-upscale-last-job-id", jobId);
     await refreshHistory();
     setMessage(`任务状态：${statusLabel(processed.status)}`);
   }
 
   function clearSelection() {
-    window.localStorage.removeItem("ninebot-upscale-last-job-id");
+    window.localStorage.removeItem("ai-upscale-last-job-id");
     setJob(null);
     setPreview(null);
     setMessage("已清除当前选择，历史记录不会删除");
   }
 
   function startBlankTask() {
-    window.localStorage.removeItem("ninebot-upscale-last-job-id");
+    window.localStorage.removeItem("ai-upscale-last-job-id");
     setJob(null);
     setPreview(null);
     setView("workspace");
@@ -131,7 +131,7 @@ export default function Page() {
   }
 
   useEffect(() => {
-    const lastJobId = window.localStorage.getItem("ninebot-upscale-last-job-id");
+    const lastJobId = window.localStorage.getItem("ai-upscale-last-job-id");
     if (!lastJobId) {
       const historyTimer = window.setTimeout(() => {
         refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
@@ -139,12 +139,12 @@ export default function Page() {
       return () => window.clearTimeout(historyTimer);
     }
     const timer = window.setTimeout(() => {
-      setLastBatchId(window.localStorage.getItem("ninebot-upscale-last-batch-id"));
+      setLastBatchId(window.localStorage.getItem("ai-upscale-last-batch-id"));
       refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
       refreshJob(lastJobId)
         .then(() => setMessage(`已恢复最近任务：${lastJobId}`))
         .catch(() => {
-          window.localStorage.removeItem("ninebot-upscale-last-job-id");
+          window.localStorage.removeItem("ai-upscale-last-job-id");
           setMessage("最近任务恢复失败，请重新上传");
         });
     }, 0);
@@ -167,9 +167,9 @@ export default function Page() {
       <aside className="sidebar">
         <div className="brand-block">
           <span className="brand-kicker">AI IMAGE UPSCALE</span>
-          <h1 className="brand">九号高清放大 MVP</h1>
+          <h1 className="brand">AI 高清放大 MVP</h1>
           <p className="subtle">
-            面向内部产品图、营销图、电商详情页图的 2x/4x 高清放大工具。
+            面向产品图、营销图、电商详情页图的 2x/4x 高清放大工具。
           </p>
           <div className="sidebar-status">
             <span>本地推理</span>
@@ -179,7 +179,7 @@ export default function Page() {
         </div>
         <div className="demo-note">
           <strong>审核边界</strong>
-          <p>公开样本只证明工程链路。九号内部评审需要使用授权产品/营销素材，并对 Logo、型号、仪表盘和文字做人工审核。</p>
+          <p>公开样本只证明工程链路。正式评审需要使用授权产品/营销素材，并对 Logo、型号、仪表盘和文字做人工审核。</p>
         </div>
         <div className="flow-guide" aria-label="演示流程">
           <span className="flow-caption">流程指示</span>
@@ -224,7 +224,7 @@ export default function Page() {
       <section className="main">
         <div className="workspace-hero">
           <div className="workspace-copy">
-            <span className="eyebrow">Ninebot Internal AI Tool</span>
+            <span className="eyebrow">AI Image Upscale Tool</span>
             <h2>{activeView.title}</h2>
             <p>{activeView.subtitle}</p>
             <div className="message-pill">
@@ -291,7 +291,7 @@ export default function Page() {
                 onPreviewChanged={setPreview}
                 onError={setMessage}
                 onCreated={(created) => {
-                  window.localStorage.setItem("ninebot-upscale-last-job-id", created.job_id);
+                  window.localStorage.setItem("ai-upscale-last-job-id", created.job_id);
                   setMessage(`任务已创建：${created.job_id}`);
                   refreshJob(created.job_id)
                     .then(() => refreshHistory())
@@ -338,9 +338,9 @@ export default function Page() {
                 onCreated={(batch) => {
                   const firstJobId = batch.job_ids[0];
                   if (firstJobId) {
-                    window.localStorage.setItem("ninebot-upscale-last-job-id", firstJobId);
+                    window.localStorage.setItem("ai-upscale-last-job-id", firstJobId);
                   }
-                  window.localStorage.setItem("ninebot-upscale-last-batch-id", batch.batch_id);
+                  window.localStorage.setItem("ai-upscale-last-batch-id", batch.batch_id);
                   setLastBatchId(batch.batch_id);
                   setPreview(null);
                   setMessage(`批量任务已创建：${batch.created_count} 张`);
@@ -365,7 +365,7 @@ export default function Page() {
                 </div>
                 <div>
                   <strong>建议节奏</strong>
-                  <span>公司演示前先跑 2-10 张公开样本确认链路，再换成已授权素材。</span>
+                  <span>正式演示前先跑 2-10 张公开样本确认链路，再换成已授权素材。</span>
                 </div>
                 <div>
                   <strong>人工复核</strong>

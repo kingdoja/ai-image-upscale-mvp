@@ -126,7 +126,7 @@ def test_download_batch_risk_samples_csv_for_training_dataset(client, sample_ima
     assert "structure_changed;fake_texture" in response.text
     assert "人工回贴 Logo/文字并进入负样本复盘" in response.text
     assert "重新处理或检查推理服务配置" in response.text
-    assert "仅供内部训练/评估使用，不上传第三方公共服务" in response.text
+    assert "仅供本地训练/评估使用，不上传第三方公共服务" in response.text
 
 
 def test_download_batch_risk_samples_markdown_lists_review_scope(client, sample_image_bytes):
@@ -152,7 +152,7 @@ def test_download_batch_risk_samples_markdown_lists_review_scope(client, sample_
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/markdown")
     assert "失败/高风险样本清单" in response.text
-    assert "仅供内部训练/评估使用，不上传第三方公共服务" in response.text
+    assert "仅供本地训练/评估使用，不上传第三方公共服务" in response.text
     assert "Logo/文字错误" in response.text
     assert created["job_ids"][0] in response.text
 

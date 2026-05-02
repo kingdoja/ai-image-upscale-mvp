@@ -12,7 +12,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     ensure_storage_dirs(settings.storage_root)
     init_db()
-    app = FastAPI(title="Ninebot Upscale API", version="0.1.0")
+    app = FastAPI(title="AI Image Upscale API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
