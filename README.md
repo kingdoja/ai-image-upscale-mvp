@@ -4,11 +4,11 @@
 
 ## Demo 视频
 
-2 分 20 秒 MVP 演示，覆盖上传图片、创建任务、查看结果、批量处理和导出评测材料。
+2 分 20 秒 MVP 演示，覆盖上传图片、创建任务、查看结果、批量处理和导出评测材料。下方为 3x 加速完整流程 GIF 预览。
 
-[![MVP Demo 演示视频封面](assets/ai-upscale-mvp-demo-cover.jpg)](assets/ai-upscale-mvp-demo.mp4)
+![MVP Demo 完整流程加速预览](assets/ai-upscale-mvp-demo-full-preview.gif)
 
-点击上方封面，打开 GitHub 视频预览页播放完整演示。
+[观看完整 MVP Demo 演示视频](assets/ai-upscale-mvp-demo.mp4)
 
 ## 项目亮点
 
