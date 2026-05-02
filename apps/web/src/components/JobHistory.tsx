@@ -27,6 +27,15 @@ export function JobHistory({ jobs, activeJobId, onSelect, onProcess, onClearSele
       return job.status === filter;
     });
   }, [filter, jobs]);
+  function processButtonLabel(status: JobSummaryRead["status"]) {
+    if (status === "failed") {
+      return "重新处理";
+    }
+    if (status === "running") {
+      return "处理中";
+    }
+    return "处理任务";
+  }
 
   return (
     <section className="history-section">
@@ -79,11 +88,18 @@ export function JobHistory({ jobs, activeJobId, onSelect, onProcess, onClearSele
                 <span className={`risk-badge risk-${job.risk_level}`}>{riskLabel(job.risk_level)}</span>
               </span>
             </button>
-            {job.status !== "completed" ? (
-              <button type="button" className="secondary small-button" onClick={() => onProcess(job.job_id)}>
-                处理任务
-              </button>
-            ) : null}
+            <div className="history-actions">
+              {job.status === "completed" && job.result_url ? (
+                <a className="secondary small-link-button" href={assetUrl(job.result_url)} download>
+                  下载结果
+                </a>
+              ) : null}
+              {job.status !== "completed" ? (
+                <button type="button" className="secondary small-button" disabled={job.status === "running"} onClick={() => onProcess(job.job_id)}>
+                  {processButtonLabel(job.status)}
+                </button>
+              ) : null}
+            </div>
           </article>
         ))}
       </div>

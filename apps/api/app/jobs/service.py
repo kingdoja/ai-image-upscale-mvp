@@ -158,6 +158,7 @@ def serialize_job_summary(job: Job) -> dict:
     elif job.warnings:
         risk_level = "medium"
     thumbnail_url = _public_path(job.results[0].thumbnail_path) if job.results else None
+    result_url = _public_path(job.results[0].file_path) if job.results else None
     return {
         "job_id": job.id,
         "status": job.status,
@@ -167,6 +168,7 @@ def serialize_job_summary(job: Job) -> dict:
         "warnings": job.warnings,
         "result_count": len(job.results),
         "thumbnail_url": thumbnail_url,
+        "result_url": result_url,
         "risk_level": risk_level,
         "created_at": job.created_at,
     }

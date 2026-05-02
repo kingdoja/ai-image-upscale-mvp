@@ -255,7 +255,7 @@ export default function Page() {
                 </div>
                 <div>
                   <strong>建议节奏</strong>
-                  <span>公司演示前先跑 5-10 张公开样本确认链路，再换成已授权素材。</span>
+                  <span>公司演示前先跑 2-10 张公开样本确认链路，再换成已授权素材。</span>
                 </div>
                 <div>
                   <strong>人工复核</strong>

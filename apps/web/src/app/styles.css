@@ -414,6 +414,25 @@ code {
   font-size: 13px;
 }
 
+.small-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.small-link-button {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 10px;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .badge {
   border-radius: 999px;
   background: #eaf2ff;

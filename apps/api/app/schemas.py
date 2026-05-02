@@ -66,6 +66,7 @@ class JobSummaryRead(BaseModel):
     warnings: List[str]
     result_count: int
     thumbnail_url: Optional[str] = None
+    result_url: Optional[str] = None
     risk_level: RiskLevel
     created_at: datetime
 

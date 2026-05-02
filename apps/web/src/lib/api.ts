@@ -42,6 +42,7 @@ export type JobSummaryRead = {
   warnings: string[];
   result_count: number;
   thumbnail_url: string | null;
+  result_url: string | null;
   risk_level: "low" | "medium" | "high";
   created_at: string;
 };

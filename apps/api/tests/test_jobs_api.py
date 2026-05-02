@@ -91,6 +91,7 @@ def test_list_jobs_includes_thumbnail_and_risk_summary(client, sample_image_byte
     job = response.json()["jobs"][0]
     assert job["job_id"] == created["job_id"]
     assert job["thumbnail_url"].startswith("/storage/thumbnails/")
+    assert job["result_url"].startswith("/storage/results/")
     assert job["risk_level"] == "medium"
 
 
