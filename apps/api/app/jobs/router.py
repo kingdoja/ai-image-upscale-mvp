@@ -16,8 +16,11 @@ from .service import (
     process_job,
     build_batch_results_zip,
     build_batch_evaluation_report,
+    build_batch_risk_samples,
     render_evaluation_report_csv,
     render_evaluation_report_markdown,
+    render_risk_samples_csv,
+    render_risk_samples_markdown,
     serialize_job,
     serialize_job_summary,
 )
@@ -89,6 +92,24 @@ def download_upscale_report(batch_id: str, format: str = "markdown", db: Session
             content=render_evaluation_report_markdown(report),
             media_type="text/markdown; charset=utf-8",
             headers={"Content-Disposition": f'attachment; filename="{batch_id}-evaluation.md"'},
+        )
+    raise HTTPException(status_code=422, detail="format must be markdown or csv")
+
+
+@reports_router.get("/{batch_id}/risk-samples")
+def download_risk_samples(batch_id: str, format: str = "markdown", db: Session = Depends(get_db)) -> Response:
+    report = build_batch_risk_samples(db, batch_id)
+    if format == "csv":
+        return Response(
+            content=render_risk_samples_csv(report),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{batch_id}-risk-samples.csv"'},
+        )
+    if format in {"markdown", "md"}:
+        return Response(
+            content=render_risk_samples_markdown(report),
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{batch_id}-risk-samples.md"'},
         )
     raise HTTPException(status_code=422, detail="format must be markdown or csv")
 

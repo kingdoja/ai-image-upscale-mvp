@@ -73,6 +73,90 @@ def test_download_batch_evaluation_report_as_csv(client, sample_image_bytes):
     assert f"{created['job_ids'][0]},completed,4,faithful,product,low,5,True,good" in response.text
 
 
+def test_download_batch_risk_samples_csv_for_training_dataset(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/batches",
+        data={"scale": "4", "mode": "faithful", "scene": "ecommerce"},
+        files=[
+            ("images", ("logo.png", sample_image_bytes, "image/png")),
+            ("images", ("structure.png", sample_image_bytes, "image/png")),
+            ("images", ("failed.png", sample_image_bytes, "image/png")),
+        ],
+    ).json()
+    first = client.post(f"/api/upscale/jobs/{created['job_ids'][0]}/process").json()
+    second = client.post(f"/api/upscale/jobs/{created['job_ids'][1]}/process").json()
+    client.post(
+        f"/api/upscale/jobs/{created['job_ids'][0]}/feedback",
+        json={
+            "selected_result_id": first["results"][0]["id"],
+            "rating": 2,
+            "usable": False,
+            "issues": ["logo_error", "color_shift"],
+            "comment": "Logo and color need review",
+        },
+    )
+    client.post(
+        f"/api/upscale/jobs/{created['job_ids'][1]}/feedback",
+        json={
+            "selected_result_id": second["results"][0]["id"],
+            "rating": 3,
+            "usable": False,
+            "issues": ["structure_changed", "fake_texture"],
+            "comment": "Structure changed",
+        },
+    )
+
+    from app.database import SessionLocal
+    from app.models import Job, Result
+
+    with SessionLocal() as session:
+        result = session.get(Result, first["results"][0]["id"])
+        result.risk_level = "high"
+        failed_job = session.get(Job, created["job_ids"][2])
+        failed_job.status = "failed"
+        failed_job.warnings = ["worker_failed: test"]
+        session.commit()
+
+    response = client.get(f"/api/upscale/reports/{created['batch_id']}/risk-samples?format=csv")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "job_id,original_path,result_path,scale,mode,scene,status,risk_level,rating,usable,issues,suggested_action" in response.text
+    assert "logo_error;color_shift" in response.text
+    assert "structure_changed;fake_texture" in response.text
+    assert "人工回贴 Logo/文字并进入负样本复盘" in response.text
+    assert "重新处理或检查推理服务配置" in response.text
+    assert "仅供内部训练/评估使用，不上传第三方公共服务" in response.text
+
+
+def test_download_batch_risk_samples_markdown_lists_review_scope(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/batches",
+        data={"scale": "4", "mode": "faithful", "scene": "marketing"},
+        files=[("images", ("logo.png", sample_image_bytes, "image/png"))],
+    ).json()
+    processed = client.post(f"/api/upscale/jobs/{created['job_ids'][0]}/process").json()
+    client.post(
+        f"/api/upscale/jobs/{created['job_ids'][0]}/feedback",
+        json={
+            "selected_result_id": processed["results"][0]["id"],
+            "rating": 2,
+            "usable": False,
+            "issues": ["logo_error"],
+            "comment": "Logo mismatch",
+        },
+    )
+
+    response = client.get(f"/api/upscale/reports/{created['batch_id']}/risk-samples")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/markdown")
+    assert "失败/高风险样本清单" in response.text
+    assert "仅供内部训练/评估使用，不上传第三方公共服务" in response.text
+    assert "Logo/文字错误" in response.text
+    assert created["job_ids"][0] in response.text
+
+
 def test_create_job_accepts_valid_upload(client, sample_image_bytes):
     response = client.post(
         "/api/upscale/jobs",

@@ -272,6 +272,162 @@ def render_evaluation_report_csv(report: dict) -> str:
     return output.getvalue()
 
 
+PROBLEM_ISSUE_LABELS = {
+    "logo_error": "Logo/文字错误",
+    "structure_changed": "产品结构变形",
+    "fake_texture": "材质异常",
+    "color_shift": "颜色偏移",
+    "text_blur": "文字模糊",
+    "oversharpen": "过锐化",
+    "too_slow": "处理较慢",
+    "other": "其他问题",
+}
+
+
+def _selected_or_first_result(job: Job, feedback: Optional[Feedback]) -> Optional[Result]:
+    if feedback:
+        for result in job.results:
+            if result.id == feedback.selected_result_id:
+                return result
+    return job.results[0] if job.results else None
+
+
+def _risk_sample_reason(job: Job, risk_level: str, feedback: Optional[Feedback]) -> str:
+    reasons = []
+    if job.status == "failed":
+        reasons.append("任务失败")
+    if risk_level != "low":
+        reasons.append(f"{risk_level}风险")
+    if feedback and not feedback.usable:
+        reasons.append("评审不可用")
+    if feedback:
+        reasons.extend(PROBLEM_ISSUE_LABELS[issue] for issue in feedback.issues if issue in PROBLEM_ISSUE_LABELS)
+    return "；".join(dict.fromkeys(reasons))
+
+
+def _suggest_risk_action(job: Job, feedback: Optional[Feedback]) -> str:
+    issues = set(feedback.issues if feedback else [])
+    if job.status == "failed":
+        return "重新处理或检查推理服务配置"
+    if "logo_error" in issues or "text_blur" in issues:
+        return "人工回贴 Logo/文字并进入负样本复盘"
+    if "structure_changed" in issues:
+        return "进入结构一致性负样本集"
+    if "fake_texture" in issues:
+        return "进入材质异常负样本集"
+    if "color_shift" in issues:
+        return "进入颜色一致性负样本集"
+    if feedback and not feedback.usable:
+        return "人工复核后决定重跑或纳入负样本"
+    return "人工复核"
+
+
+def build_batch_risk_samples(db: Session, batch_id: str) -> dict:
+    job_ids = get_batch_job_ids(batch_id)
+    rows = []
+    for job_id in job_ids:
+        job = get_job(db, job_id)
+        feedback = _latest_feedback(job)
+        risk_level = _job_risk_level(job)
+        problem_issues = [issue for issue in (feedback.issues if feedback else []) if issue != "good"]
+        is_risk_sample = (
+            job.status == "failed"
+            or risk_level != "low"
+            or bool(problem_issues)
+            or bool(feedback and not feedback.usable)
+        )
+        if not is_risk_sample:
+            continue
+        selected_result = _selected_or_first_result(job, feedback)
+        rows.append(
+            {
+                "job_id": job.id,
+                "original_path": job.original_file_path,
+                "result_path": selected_result.file_path if selected_result else "",
+                "scale": job.scale,
+                "mode": job.mode,
+                "scene": job.scene,
+                "status": job.status,
+                "risk_level": risk_level,
+                "rating": feedback.rating if feedback else "",
+                "usable": feedback.usable if feedback else "",
+                "issues": ";".join(feedback.issues if feedback else []),
+                "risk_reason": _risk_sample_reason(job, risk_level, feedback),
+                "suggested_action": _suggest_risk_action(job, feedback),
+                "comment": feedback.comment if feedback else ";".join(job.warnings),
+            }
+        )
+    return {"batch_id": batch_id, "sample_count": len(rows), "rows": rows}
+
+
+def render_risk_samples_csv(report: dict) -> str:
+    output = StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(["仅供内部训练/评估使用，不上传第三方公共服务"])
+    writer.writerow(
+        [
+            "job_id",
+            "original_path",
+            "result_path",
+            "scale",
+            "mode",
+            "scene",
+            "status",
+            "risk_level",
+            "rating",
+            "usable",
+            "issues",
+            "suggested_action",
+            "risk_reason",
+            "comment",
+        ]
+    )
+    for row in report["rows"]:
+        writer.writerow(
+            [
+                row["job_id"],
+                row["original_path"],
+                row["result_path"],
+                row["scale"],
+                row["mode"],
+                row["scene"],
+                row["status"],
+                row["risk_level"],
+                row["rating"],
+                row["usable"],
+                row["issues"],
+                row["suggested_action"],
+                row["risk_reason"],
+                row["comment"],
+            ]
+        )
+    return output.getvalue()
+
+
+def render_risk_samples_markdown(report: dict) -> str:
+    row_lines = [
+        (
+            f"| {row['job_id']} | {row['status']} | {row['risk_level']} | {row['issues'] or '-'} | "
+            f"{row['risk_reason'] or '-'} | {row['suggested_action']} |"
+        )
+        for row in report["rows"]
+    ] or ["| - | - | - | - | 暂无失败或高风险样本 | - |"]
+    return "\n".join(
+        [
+            f"# 失败/高风险样本清单 - {report['batch_id']}",
+            "",
+            f"- 风险样本数: {report['sample_count']}",
+            "- 仅供内部训练/评估使用，不上传第三方公共服务。",
+            "- 重点复核：Logo/文字错误、产品结构变形、材质异常、颜色偏移。",
+            "",
+            "| Job ID | 状态 | 风险 | 问题标签 | 风险原因 | 建议动作 |",
+            "|---|---|---|---|---|---|",
+            *row_lines,
+            "",
+        ]
+    )
+
+
 def enqueue_job(job_id: str) -> None:
     settings = get_settings()
     if not settings.enqueue_jobs:
