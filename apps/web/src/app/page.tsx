@@ -44,7 +44,7 @@ type ViewName = "workspace" | "batch" | "history" | "evaluation";
 const viewMeta: Record<ViewName, { title: string; subtitle: string }> = {
   workspace: {
     title: "上传工作台",
-    subtitle: "上传单张产品或营销素材，选择倍率和模式后创建高清放大任务。"
+    subtitle: "把低清产品图或营销素材升级为 2x/4x 高清候选图，并保留对比与复核记录。"
   },
   history: {
     title: "最近任务",
@@ -166,10 +166,10 @@ export default function Page() {
     <main className="shell">
       <aside className="sidebar">
         <div className="brand-block">
-          <span className="brand-kicker">AI IMAGE UPSCALE</span>
-          <h1 className="brand">AI 高清放大 MVP</h1>
+          <span className="brand-kicker">PRODUCT IMAGE UPSCALER</span>
+          <h1 className="brand">AI 产品图高清放大</h1>
           <p className="subtle">
-            面向产品图、营销图、电商详情页图的 2x/4x 高清放大工具。
+            把低清商品图、广告图和详情页素材放大为可评测、可复核的高清候选图。
           </p>
           <div className="sidebar-status">
             <span>本地推理</span>
@@ -178,8 +178,8 @@ export default function Page() {
           </div>
         </div>
         <div className="demo-note">
-          <strong>审核边界</strong>
-          <p>公开样本只证明工程链路。正式评审需要使用授权产品/营销素材，并对 Logo、型号、仪表盘和文字做人工审核。</p>
+          <strong>商用边界</strong>
+          <p>适合先做团队试用和效果评测。正式用于营销前，仍需用授权素材验证，并人工复核 Logo、型号、仪表盘和文字细节。</p>
         </div>
         <div className="flow-guide" aria-label="演示流程">
           <span className="flow-caption">流程指示</span>

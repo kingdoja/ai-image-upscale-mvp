@@ -1,7 +1,7 @@
 [project]
 name = "ai-image-upscale-api"
 version = "0.1.0"
-description = "MVP API for AI image upscaling"
+description = "API for AI product image upscaling and evaluation workflows"
 requires-python = ">=3.8"
 dependencies = [
   "fastapi>=0.110",
