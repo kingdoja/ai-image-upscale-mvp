@@ -1,3 +1,4 @@
+import { ImageOff, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { PreviewImage } from "../app/page";
 import { assetUrl, type JobRead } from "../lib/api";
@@ -46,8 +47,16 @@ export function ResultCompare({ job, preview }: { job: JobRead | null; preview: 
   }
 
   return (
-    <section>
-      <h2 className="section-title">原图与候选结果</h2>
+    <section className="result-panel">
+      <div className="panel-heading">
+        <div>
+          <h2 className="section-title">原图与候选结果</h2>
+          <p className="subtle">完成后可在这里对比原图、保真版、写实版和锐化版。</p>
+        </div>
+        <span className="panel-icon">
+          <Sparkles size={18} />
+        </span>
+      </div>
       {originalUrl ? (
         <article className="original-preview">
           {/* Local object URL is used for demo preview only. */}
@@ -62,7 +71,13 @@ export function ResultCompare({ job, preview }: { job: JobRead | null; preview: 
           </div>
         </article>
       ) : null}
-      {!job || job.results.length === 0 ? <p className="subtle">任务完成后会显示保真版、写实版或锐化版候选图。</p> : null}
+      {!job || job.results.length === 0 ? (
+        <div className="empty-state visual-empty">
+          <ImageOff size={26} />
+          <strong>等待生成结果</strong>
+          <span>任务完成后会显示候选图、质量分、风险等级和下载入口。</span>
+        </div>
+      ) : null}
       {job?.results.length ? (
         <div className="result-tabs">
           {job.results.map((result) => (

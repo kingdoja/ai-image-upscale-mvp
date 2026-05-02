@@ -1,5 +1,18 @@
 "use client";
 
+import {
+  ClipboardCheck,
+  Download,
+  FileText,
+  History,
+  Images,
+  Layers3,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Table2,
+  UploadCloud
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { BatchUploadPanel } from "../components/BatchUploadPanel";
 import { EvaluationReportPanel } from "../components/EvaluationReportPanel";
@@ -26,13 +39,43 @@ export type PreviewImage = {
   size: number;
 };
 
+type ViewName = "workspace" | "batch" | "history" | "evaluation";
+
+const viewMeta: Record<ViewName, { title: string; subtitle: string }> = {
+  workspace: {
+    title: "上传工作台",
+    subtitle: "上传单张产品或营销素材，选择倍率和模式后创建高清放大任务。"
+  },
+  history: {
+    title: "最近任务",
+    subtitle: "查看任务状态、恢复历史结果，并对需要复核的素材做二次处理。"
+  },
+  batch: {
+    title: "批量处理",
+    subtitle: "一次上传多张图片生成独立任务，适合内部评审前的小批量验证。"
+  },
+  evaluation: {
+    title: "评测说明",
+    subtitle: "围绕清晰度、真实感、产品一致性和人工复核风险沉淀评估记录。"
+  }
+};
+
+const navItems = [
+  { view: "workspace", label: "上传工作台", Icon: UploadCloud },
+  { view: "history", label: "最近任务", Icon: History },
+  { view: "batch", label: "批量处理", Icon: Images },
+  { view: "evaluation", label: "评测说明", Icon: ClipboardCheck }
+] satisfies Array<{ view: ViewName; label: string; Icon: typeof UploadCloud }>;
+
 export default function Page() {
   const [job, setJob] = useState<JobRead | null>(null);
   const [message, setMessage] = useState("等待上传图片");
   const [preview, setPreview] = useState<PreviewImage | null>(null);
   const [history, setHistory] = useState<JobSummaryRead[]>([]);
   const [lastBatchId, setLastBatchId] = useState<string | null>(null);
-  const [view, setView] = useState<"workspace" | "batch" | "history" | "evaluation">("workspace");
+  const [view, setView] = useState<ViewName>("workspace");
+  const activeView = viewMeta[view];
+  const reviewCount = history.filter((item) => item.risk_level !== "low").length;
 
   async function refreshJob(jobId: string) {
     const nextJob = await getJob(jobId);
@@ -129,13 +172,13 @@ export default function Page() {
             面向内部产品图、营销图、电商详情页图的 2x/4x 高清放大工具。
           </p>
           <div className="sidebar-status">
-            <span>MVP v0.1</span>
             <span>本地推理</span>
-            <span>内部演示</span>
+            <span>2x / 4x</span>
+            <span>人工复核</span>
           </div>
         </div>
         <div className="demo-note">
-          <strong>演示边界</strong>
+          <strong>审核边界</strong>
           <p>公开样本只证明工程链路。九号内部评审需要使用授权产品/营销素材，并对 Logo、型号、仪表盘和文字做人工审核。</p>
         </div>
         <div className="flow-guide" aria-label="演示流程">
@@ -160,56 +203,84 @@ export default function Page() {
           </ol>
         </div>
         <nav className="side-nav">
-          <button type="button" className={view === "workspace" ? "active" : ""} onClick={() => setView("workspace")}>
-            上传工作台
-          </button>
-          <button
-            type="button"
-            className={view === "history" ? "active" : ""}
-            onClick={() => {
-              setView("history");
-              refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
-            }}
-          >
-            最近任务
-          </button>
-          <button type="button" className={view === "batch" ? "active" : ""} onClick={() => setView("batch")}>
-            批量处理
-          </button>
-          <button type="button" className={view === "evaluation" ? "active" : ""} onClick={() => setView("evaluation")}>
-            评测说明
-          </button>
+          {navItems.map(({ view: itemView, label, Icon }) => (
+            <button
+              key={itemView}
+              type="button"
+              className={view === itemView ? "active" : ""}
+              onClick={() => {
+                setView(itemView);
+                if (itemView === "history") {
+                  refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
+                }
+              }}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </button>
+          ))}
         </nav>
       </aside>
       <section className="main">
-        <div className="toolbar">
-          <div>
-            <div className="section-title">任务工作台</div>
-            <div className="subtle">{message}</div>
+        <div className="workspace-hero">
+          <div className="workspace-copy">
+            <span className="eyebrow">Ninebot Internal AI Tool</span>
+            <h2>{activeView.title}</h2>
+            <p>{activeView.subtitle}</p>
+            <div className="message-pill">
+              <ShieldCheck size={15} />
+              <span>{message}</span>
+            </div>
           </div>
-          <div className="toolbar-actions">
-            {job ? <button className="secondary" onClick={() => refreshJob(job.job_id)}>查询状态</button> : null}
+          <div className="hero-actions">
+            <div className="action-cluster">
+              <span>任务操作</span>
+              {job ? (
+                <button className="secondary" onClick={() => refreshJob(job.job_id)}>
+                  <RefreshCw size={15} />
+                  查询状态
+                </button>
+              ) : null}
+              <button className="secondary" onClick={startBlankTask}>
+                <Plus size={15} />
+                新任务
+              </button>
+            </div>
             {lastBatchId ? (
-              <a className="secondary toolbar-link" href={batchDownloadUrl(lastBatchId)}>
-                下载最近批量
-              </a>
+              <div className="action-cluster">
+                <span>批量导出</span>
+                <a className="secondary toolbar-link" href={batchDownloadUrl(lastBatchId)}>
+                  <Download size={15} />
+                  下载批量
+                </a>
+                <a className="secondary toolbar-link" href={reportDownloadUrl(lastBatchId)}>
+                  <FileText size={15} />
+                  评测报告
+                </a>
+                <a className="secondary toolbar-link" href={reportDownloadUrl(lastBatchId, "csv")}>
+                  <Table2 size={15} />
+                  CSV
+                </a>
+                <a className="secondary toolbar-link" href={riskSamplesDownloadUrl(lastBatchId)}>
+                  <Layers3 size={15} />
+                  风险样本
+                </a>
+              </div>
             ) : null}
-            {lastBatchId ? (
-              <a className="secondary toolbar-link" href={reportDownloadUrl(lastBatchId)}>
-                导出评测报告
-              </a>
-            ) : null}
-            {lastBatchId ? (
-              <a className="secondary toolbar-link" href={reportDownloadUrl(lastBatchId, "csv")}>
-                导出CSV
-              </a>
-            ) : null}
-            {lastBatchId ? (
-              <a className="secondary toolbar-link" href={riskSamplesDownloadUrl(lastBatchId)}>
-                导出风险样本
-              </a>
-            ) : null}
-            <button className="secondary" onClick={startBlankTask}>新任务</button>
+          </div>
+        </div>
+        <div className="metric-strip">
+          <div className="metric-card">
+            <span>当前任务</span>
+            <strong>{job ? statusLabel(job.status) : "未选择"}</strong>
+          </div>
+          <div className="metric-card">
+            <span>最近任务</span>
+            <strong>{history.length} 条</strong>
+          </div>
+          <div className="metric-card">
+            <span>需复核</span>
+            <strong>{reviewCount} 条</strong>
           </div>
         </div>
         {view === "workspace" ? (

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Filter, History, XCircle } from "lucide-react";
 import { assetUrl } from "../lib/api";
 import type { JobSummaryRead } from "../lib/api";
 import { modeLabel, riskLabel, statusLabel } from "../lib/presentation";
@@ -40,12 +41,28 @@ export function JobHistory({ jobs, activeJobId, onSelect, onProcess, onClearSele
   return (
     <section className="history-section">
       <div className="history-title-row">
-        <h2 className="section-title">最近任务</h2>
-        <button type="button" className="link-button" onClick={onClearSelection}>清除选择</button>
+        <div>
+          <h2 className="section-title">最近任务</h2>
+          <p className="subtle">按状态筛选任务，点击卡片在右侧恢复结果详情。</p>
+        </div>
+        <button type="button" className="link-button icon-link" onClick={onClearSelection}>
+          <XCircle size={14} />
+          清除选择
+        </button>
       </div>
-      {jobs.length === 0 ? <p className="subtle">暂无历史任务，可以先上传一张图片创建任务。</p> : null}
+      {jobs.length === 0 ? (
+        <div className="empty-state compact-empty">
+          <History size={24} />
+          <strong>暂无历史任务</strong>
+          <span>可以先上传一张图片创建任务，生成后会在这里沉淀记录。</span>
+        </div>
+      ) : null}
       {jobs.length > 0 ? (
         <div className="history-filters">
+          <span>
+            <Filter size={13} />
+            筛选
+          </span>
           {[
             ["all", "全部"],
             ["running", "处理中"],
