@@ -2,17 +2,11 @@
 
 一个面向电商、广告和营销场景的 AI 图片高清放大 MVP。它可以将低清商品图、详情页图片和营销素材放大为更清晰的 2x/4x 候选结果，并通过对比、反馈和评测记录沉淀后续模型优化数据。
 
-> GitHub About 推荐描述：AI 产品图高清放大与评测工具，面向电商、广告和营销素材优化。
-
 ## Demo 视频
 
-点击观看 2 分 20 秒 MVP 演示：上传图片、创建任务、查看结果、批量处理和导出评测材料。
+2 分 20 秒 MVP 演示，覆盖上传图片、创建任务、查看结果、批量处理和导出评测材料。
 
-[观看 MVP 演示视频](assets/ai-upscale-mvp-demo.mp4)
-
-<video src="assets/ai-upscale-mvp-demo.mp4" controls width="100%">
-  你的浏览器不支持直接播放视频，请点击上方链接观看。
-</video>
+[观看 MVP Demo 演示视频](assets/ai-upscale-mvp-demo.mp4)
 
 ## 项目亮点
 
