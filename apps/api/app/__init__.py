@@ -1,0 +1,1 @@
+"""Ninebot upscale API package."""

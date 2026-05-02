@@ -1,0 +1,1 @@
+"""Upscale job domain."""

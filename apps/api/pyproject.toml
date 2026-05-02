@@ -1,0 +1,26 @@
+[project]
+name = "ninebot-upscale-api"
+version = "0.1.0"
+description = "MVP API for Ninebot internal AI image upscaling"
+requires-python = ">=3.8"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "sqlalchemy>=1.4",
+  "pydantic>=1.8,<2",
+  "python-multipart>=0.0.9",
+  "pillow>=10",
+  "redis>=5",
+  "rq>=1.16",
+  "psycopg2-binary>=2.9",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8",
+  "httpx>=0.27",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

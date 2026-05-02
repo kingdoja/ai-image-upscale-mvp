@@ -1,0 +1,1 @@
+"""Image upscaling model adapters."""

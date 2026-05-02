@@ -1,0 +1,34 @@
+from functools import lru_cache
+from pathlib import Path
+import os
+
+from pydantic import BaseSettings, Field
+
+
+class Settings(BaseSettings):
+    service_name: str = "ninebot-upscale-api"
+    database_url: str = Field(default="sqlite:///./upscale.db", env="DATABASE_URL")
+    storage_root: Path = Field(default=Path("../../storage"), env="STORAGE_ROOT")
+    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    enqueue_jobs: bool = Field(default=False, env="ENQUEUE_JOBS")
+    process_inline: bool = Field(default=False, env="UPSCALE_PROCESS_INLINE")
+    max_upload_bytes: int = Field(default=20 * 1024 * 1024, env="MAX_UPLOAD_BYTES")
+    max_input_pixels: int = Field(default=12_000_000, env="UPSCALE_MAX_INPUT_PIXELS")
+    faithful_backend: str = Field(default="stub", env="UPSCALE_FAITHFUL_BACKEND")
+    realistic_backend: str = Field(default="disabled", env="UPSCALE_REALISTIC_BACKEND")
+    realesrgan_executable: str = Field(default="", env="REALESRGAN_EXECUTABLE")
+    realesrgan_model_path: str = Field(default="", env="REALESRGAN_MODEL_PATH")
+    realesrgan_model: str = Field(default="realesrgan-x4plus", env="REALESRGAN_MODEL")
+    realesrgan_timeout_seconds: int = Field(default=300, env="REALESRGAN_TIMEOUT_SECONDS")
+
+    class Config:
+        env_file = ".env"
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    settings = Settings()
+    override_root = os.getenv("STORAGE_ROOT")
+    if override_root:
+        settings.storage_root = Path(override_root)
+    return settings
