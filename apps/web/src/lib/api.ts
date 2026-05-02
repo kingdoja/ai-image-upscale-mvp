@@ -77,6 +77,10 @@ export function batchDownloadUrl(batchId: string) {
   return `${API_BASE_URL}/api/upscale/batches/${batchId}/download`;
 }
 
+export function reportDownloadUrl(batchId: string, format: "markdown" | "csv" = "markdown") {
+  return `${API_BASE_URL}/api/upscale/reports/${batchId}?format=${format}`;
+}
+
 export async function listJobs(): Promise<JobListRead> {
   const response = await fetch(`${API_BASE_URL}/api/upscale/jobs`);
   if (!response.ok) {

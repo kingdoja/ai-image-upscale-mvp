@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .database import init_db
-from .jobs.router import batches_router, router as jobs_router
+from .jobs.router import batches_router, reports_router, router as jobs_router
 from .storage import ensure_storage_dirs
 
 
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
 
     app.include_router(jobs_router)
     app.include_router(batches_router)
+    app.include_router(reports_router)
     if settings.storage_root.exists():
         app.mount("/storage", StaticFiles(directory=settings.storage_root), name="storage")
     return app

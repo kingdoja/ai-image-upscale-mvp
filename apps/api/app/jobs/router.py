@@ -1,7 +1,7 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -15,6 +15,9 @@ from .service import (
     list_recent_jobs,
     process_job,
     build_batch_results_zip,
+    build_batch_evaluation_report,
+    render_evaluation_report_csv,
+    render_evaluation_report_markdown,
     serialize_job,
     serialize_job_summary,
 )
@@ -22,6 +25,7 @@ from .service import (
 
 router = APIRouter(prefix="/api/upscale/jobs", tags=["upscale-jobs"])
 batches_router = APIRouter(prefix="/api/upscale/batches", tags=["upscale-batches"])
+reports_router = APIRouter(prefix="/api/upscale/reports", tags=["upscale-reports"])
 
 
 @router.get("", response_model=JobListRead)
@@ -69,6 +73,24 @@ def download_upscale_batch(batch_id: str, db: Session = Depends(get_db)) -> Stre
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{batch_id}-results.zip"'},
     )
+
+
+@reports_router.get("/{batch_id}")
+def download_upscale_report(batch_id: str, format: str = "markdown", db: Session = Depends(get_db)) -> Response:
+    report = build_batch_evaluation_report(db, batch_id)
+    if format == "csv":
+        return Response(
+            content=render_evaluation_report_csv(report),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{batch_id}-evaluation.csv"'},
+        )
+    if format in {"markdown", "md"}:
+        return Response(
+            content=render_evaluation_report_markdown(report),
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{batch_id}-evaluation.md"'},
+        )
+    raise HTTPException(status_code=422, detail="format must be markdown or csv")
 
 
 @router.get("/{job_id}", response_model=JobRead)

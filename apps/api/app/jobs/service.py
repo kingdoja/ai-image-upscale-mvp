@@ -1,7 +1,10 @@
 from pathlib import Path
 from io import BytesIO
+from collections import Counter
+import csv
 import json
-from typing import Iterable, List, Tuple
+from io import StringIO
+from typing import Iterable, List, Optional, Tuple
 import zipfile
 
 from fastapi import HTTPException, UploadFile
@@ -132,6 +135,141 @@ def build_batch_results_zip(db: Session, batch_id: str) -> BytesIO:
         raise HTTPException(status_code=404, detail="No completed results are available for this batch")
     buffer.seek(0)
     return buffer
+
+
+def _job_risk_level(job: Job) -> str:
+    risk_order = {"low": 0, "medium": 1, "high": 2}
+    if job.results:
+        return max((result.risk_level for result in job.results), key=lambda value: risk_order.get(value, 0))
+    if job.warnings:
+        return "medium"
+    return "low"
+
+
+def _latest_feedback(job: Job) -> Optional[Feedback]:
+    if not job.feedback:
+        return None
+    return max(job.feedback, key=lambda feedback: feedback.created_at)
+
+
+def build_batch_evaluation_report(db: Session, batch_id: str) -> dict:
+    job_ids = get_batch_job_ids(batch_id)
+    jobs = [get_job(db, job_id) for job_id in job_ids]
+    rows = []
+    ratings = []
+    usable_count = 0
+    issue_counts: Counter[str] = Counter()
+    high_risk_jobs = []
+
+    for job in jobs:
+        feedback = _latest_feedback(job)
+        risk_level = _job_risk_level(job)
+        issues = feedback.issues if feedback else []
+        issue_counts.update(issues)
+        if feedback:
+            ratings.append(feedback.rating)
+            if feedback.usable:
+                usable_count += 1
+        if risk_level == "high":
+            high_risk_jobs.append(job.id)
+        rows.append(
+            {
+                "job_id": job.id,
+                "status": job.status,
+                "scale": job.scale,
+                "mode": job.mode,
+                "scene": job.scene,
+                "risk_level": risk_level,
+                "rating": feedback.rating if feedback else "",
+                "usable": feedback.usable if feedback else "",
+                "issues": ";".join(issues),
+                "comment": feedback.comment if feedback else "",
+            }
+        )
+
+    average_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
+    return {
+        "batch_id": batch_id,
+        "sample_count": len(jobs),
+        "completed_count": sum(1 for job in jobs if job.status == "completed"),
+        "failed_count": sum(1 for job in jobs if job.status == "failed"),
+        "feedback_count": len(ratings),
+        "average_rating": average_rating,
+        "usable_count": usable_count,
+        "high_risk_jobs": high_risk_jobs,
+        "issue_counts": dict(issue_counts.most_common()),
+        "rows": rows,
+    }
+
+
+def render_evaluation_report_markdown(report: dict) -> str:
+    average_rating = report["average_rating"] if report["average_rating"] is not None else "暂无评分"
+    issue_lines = [
+        f"- {issue}: {count}"
+        for issue, count in report["issue_counts"].items()
+    ] or ["- 暂无问题标签"]
+    high_risk_lines = [f"- {job_id}" for job_id in report["high_risk_jobs"]] or ["- 暂无高风险样本"]
+    row_lines = [
+        (
+            f"| {row['job_id']} | {row['status']} | {row['mode']} | {row['scene']} | "
+            f"{row['risk_level']} | {row['rating'] or '-'} | {row['usable'] if row['usable'] != '' else '-'} | "
+            f"{row['issues'] or '-'} |"
+        )
+        for row in report["rows"]
+    ]
+    return "\n".join(
+        [
+            f"# 高清放大评测报告 - {report['batch_id']}",
+            "",
+            "## 汇总",
+            "",
+            f"- 样本数: {report['sample_count']}",
+            f"- 完成数: {report['completed_count']}",
+            f"- 失败数: {report['failed_count']}",
+            f"- 已评分数: {report['feedback_count']}",
+            f"- 平均评分: {average_rating}",
+            f"- 可用数: {report['usable_count']}",
+            "",
+            "## 高风险样本",
+            "",
+            *high_risk_lines,
+            "",
+            "## 典型问题标签",
+            "",
+            *issue_lines,
+            "",
+            "## 样本明细",
+            "",
+            "| Job ID | 状态 | 模式 | 场景 | 风险 | 评分 | 可用 | 问题标签 |",
+            "|---|---|---|---|---|---:|---|---|",
+            *row_lines,
+            "",
+            "> 本报告仅供内部评测和训练数据复盘使用，含 Logo/文字/型号/仪表盘区域的样本需人工复核。",
+            "",
+        ]
+    )
+
+
+def render_evaluation_report_csv(report: dict) -> str:
+    output = StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(["job_id", "status", "scale", "mode", "scene", "risk_level", "rating", "usable", "issues", "comment"])
+    for row in report["rows"]:
+        writer.writerow(
+            [
+                row["job_id"],
+                row["status"],
+                row["scale"],
+                row["mode"],
+                row["scene"],
+                row["risk_level"],
+                row["rating"],
+                row["usable"],
+                row["issues"],
+                row["comment"],
+            ]
+        )
+    return output.getvalue()
 
 
 def enqueue_job(job_id: str) -> None:

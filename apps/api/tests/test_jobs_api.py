@@ -2,6 +2,77 @@ from io import BytesIO
 import zipfile
 
 
+def test_download_batch_evaluation_report_as_markdown(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/batches",
+        data={"scale": "4", "mode": "faithful", "scene": "ecommerce"},
+        files=[
+            ("images", ("first.png", sample_image_bytes, "image/png")),
+            ("images", ("second.png", sample_image_bytes, "image/png")),
+        ],
+    ).json()
+    processed = client.post(f"/api/upscale/jobs/{created['job_ids'][0]}/process").json()
+    result_id = processed["results"][0]["id"]
+    client.post(
+        f"/api/upscale/jobs/{created['job_ids'][0]}/feedback",
+        json={
+            "selected_result_id": result_id,
+            "rating": 4,
+            "usable": True,
+            "issues": ["good", "logo_error"],
+            "comment": "[evaluation]\nclarity=5\nstructure=4\nnotes=Logo needs review",
+        },
+    )
+
+    from app.database import SessionLocal
+    from app.models import Job, Result
+
+    with SessionLocal() as session:
+        result = session.get(Result, result_id)
+        result.risk_level = "high"
+        failed_job = session.get(Job, created["job_ids"][1])
+        failed_job.status = "failed"
+        session.commit()
+
+    response = client.get(f"/api/upscale/reports/{created['batch_id']}")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/markdown")
+    assert "样本数: 2" in response.text
+    assert "完成数: 1" in response.text
+    assert "失败数: 1" in response.text
+    assert "平均评分: 4.0" in response.text
+    assert "logo_error: 1" in response.text
+    assert created["job_ids"][0] in response.text
+
+
+def test_download_batch_evaluation_report_as_csv(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/batches",
+        data={"scale": "4", "mode": "faithful", "scene": "product"},
+        files=[("images", ("first.png", sample_image_bytes, "image/png"))],
+    ).json()
+    processed = client.post(f"/api/upscale/jobs/{created['job_ids'][0]}/process").json()
+    result_id = processed["results"][0]["id"]
+    client.post(
+        f"/api/upscale/jobs/{created['job_ids'][0]}/feedback",
+        json={
+            "selected_result_id": result_id,
+            "rating": 5,
+            "usable": True,
+            "issues": ["good"],
+            "comment": "[evaluation]\nclarity=5\nnotes=usable",
+        },
+    )
+
+    response = client.get(f"/api/upscale/reports/{created['batch_id']}?format=csv")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "job_id,status,scale,mode,scene,risk_level,rating,usable,issues" in response.text
+    assert f"{created['job_ids'][0]},completed,4,faithful,product,low,5,True,good" in response.text
+
+
 def test_create_job_accepts_valid_upload(client, sample_image_bytes):
     response = client.post(
         "/api/upscale/jobs",

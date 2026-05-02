@@ -8,7 +8,7 @@ import { JobHistory } from "../components/JobHistory";
 import { JobStatus } from "../components/JobStatus";
 import { ResultCompare } from "../components/ResultCompare";
 import { Uploader } from "../components/Uploader";
-import { batchDownloadUrl, getJob, listJobs, processJob, type JobRead, type JobSummaryRead } from "../lib/api";
+import { batchDownloadUrl, getJob, listJobs, processJob, reportDownloadUrl, type JobRead, type JobSummaryRead } from "../lib/api";
 import { statusLabel } from "../lib/presentation";
 
 export type PreviewImage = {
@@ -178,6 +178,16 @@ export default function Page() {
             {lastBatchId ? (
               <a className="secondary toolbar-link" href={batchDownloadUrl(lastBatchId)}>
                 下载最近批量
+              </a>
+            ) : null}
+            {lastBatchId ? (
+              <a className="secondary toolbar-link" href={reportDownloadUrl(lastBatchId)}>
+                导出评测报告
+              </a>
+            ) : null}
+            {lastBatchId ? (
+              <a className="secondary toolbar-link" href={reportDownloadUrl(lastBatchId, "csv")}>
+                导出CSV
               </a>
             ) : null}
             <button className="secondary" onClick={startBlankTask}>新任务</button>
