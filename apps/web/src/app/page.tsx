@@ -122,10 +122,18 @@ export default function Page() {
   return (
     <main className="shell">
       <aside className="sidebar">
-        <h1 className="brand">九号高清放大 MVP</h1>
-        <p className="subtle">
-          面向内部产品图、营销图、电商详情页图的 2x/4x 高清放大工具。MVP 先跑通上传、任务、候选结果和反馈闭环。
-        </p>
+        <div className="brand-block">
+          <span className="brand-kicker">AI IMAGE UPSCALE</span>
+          <h1 className="brand">九号高清放大 MVP</h1>
+          <p className="subtle">
+            面向内部产品图、营销图、电商详情页图的 2x/4x 高清放大工具。
+          </p>
+          <div className="sidebar-status">
+            <span>MVP v0.1</span>
+            <span>本地推理</span>
+            <span>内部演示</span>
+          </div>
+        </div>
         <div className="demo-note">
           <strong>演示边界</strong>
           <p>公开样本只证明工程链路。九号内部评审需要使用授权产品/营销素材，并对 Logo、型号、仪表盘和文字做人工审核。</p>
