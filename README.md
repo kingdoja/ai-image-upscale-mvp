@@ -117,6 +117,19 @@ $env:REALESRGAN_MODEL='realesrgan-x4plus'
 
 ## 8. 本地开发命令
 
+本地 Demo 推荐使用启动脚本：
+
+```powershell
+.\scripts\start_api_demo.ps1
+.\scripts\start_web_demo.ps1
+```
+
+如果只验证工程链路、不跑真实 Real-ESRGAN：
+
+```powershell
+.\scripts\start_api_demo.ps1 -Backend stub
+```
+
 首次安装 Python 依赖：
 
 ```powershell
