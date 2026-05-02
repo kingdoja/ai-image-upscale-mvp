@@ -7,7 +7,7 @@ import { JobHistory } from "../components/JobHistory";
 import { JobStatus } from "../components/JobStatus";
 import { ResultCompare } from "../components/ResultCompare";
 import { Uploader } from "../components/Uploader";
-import { getJob, listJobs, processJob, type JobRead, type JobSummaryRead } from "../lib/api";
+import { batchDownloadUrl, getJob, listJobs, processJob, type JobRead, type JobSummaryRead } from "../lib/api";
 import { statusLabel } from "../lib/presentation";
 
 export type PreviewImage = {
@@ -21,6 +21,7 @@ export default function Page() {
   const [message, setMessage] = useState("等待上传图片");
   const [preview, setPreview] = useState<PreviewImage | null>(null);
   const [history, setHistory] = useState<JobSummaryRead[]>([]);
+  const [lastBatchId, setLastBatchId] = useState<string | null>(null);
   const [view, setView] = useState<"workspace" | "batch" | "history" | "samples" | "evaluation">("workspace");
 
   async function refreshJob(jobId: string) {
@@ -85,6 +86,7 @@ export default function Page() {
       return () => window.clearTimeout(historyTimer);
     }
     const timer = window.setTimeout(() => {
+      setLastBatchId(window.localStorage.getItem("ninebot-upscale-last-batch-id"));
       refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
       refreshJob(lastJobId)
         .then(() => setMessage(`已恢复最近任务：${lastJobId}`))
@@ -172,6 +174,11 @@ export default function Page() {
           </div>
           <div className="toolbar-actions">
             {job ? <button className="secondary" onClick={() => refreshJob(job.job_id)}>查询状态</button> : null}
+            {lastBatchId ? (
+              <a className="secondary toolbar-link" href={batchDownloadUrl(lastBatchId)}>
+                下载最近批量
+              </a>
+            ) : null}
             <button className="secondary" onClick={startBlankTask}>新任务</button>
           </div>
         </div>
@@ -232,6 +239,8 @@ export default function Page() {
                   if (firstJobId) {
                     window.localStorage.setItem("ninebot-upscale-last-job-id", firstJobId);
                   }
+                  window.localStorage.setItem("ninebot-upscale-last-batch-id", batch.batch_id);
+                  setLastBatchId(batch.batch_id);
                   setPreview(null);
                   setMessage(`批量任务已创建：${batch.created_count} 张`);
                   refreshHistory()

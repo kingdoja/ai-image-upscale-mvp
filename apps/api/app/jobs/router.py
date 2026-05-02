@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -13,6 +14,7 @@ from .service import (
     get_job,
     list_recent_jobs,
     process_job,
+    build_batch_results_zip,
     serialize_job,
     serialize_job_summary,
 )
@@ -56,6 +58,16 @@ def create_upscale_batch(
         batch_id=batch_id,
         job_ids=[job.id for job in jobs],
         created_count=len(jobs),
+    )
+
+
+@batches_router.get("/{batch_id}/download")
+def download_upscale_batch(batch_id: str, db: Session = Depends(get_db)) -> StreamingResponse:
+    archive = build_batch_results_zip(db, batch_id)
+    return StreamingResponse(
+        archive,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{batch_id}-results.zip"'},
     )
 
 

@@ -175,6 +175,11 @@ code {
   justify-content: flex-end;
 }
 
+.toolbar-link {
+  color: #171b22;
+  text-decoration: none;
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(320px, 420px) minmax(420px, 1fr);

@@ -73,6 +73,10 @@ export async function createBatch(formData: FormData): Promise<BatchCreateRespon
   return response.json();
 }
 
+export function batchDownloadUrl(batchId: string) {
+  return `${API_BASE_URL}/api/upscale/batches/${batchId}/download`;
+}
+
 export async function listJobs(): Promise<JobListRead> {
   const response = await fetch(`${API_BASE_URL}/api/upscale/jobs`);
   if (!response.ok) {

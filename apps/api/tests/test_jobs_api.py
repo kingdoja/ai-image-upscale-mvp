@@ -1,3 +1,7 @@
+from io import BytesIO
+import zipfile
+
+
 def test_create_job_accepts_valid_upload(client, sample_image_bytes):
     response = client.post(
         "/api/upscale/jobs",
@@ -75,6 +79,29 @@ def test_create_batch_creates_independent_jobs(client, sample_image_bytes):
 
     jobs = client.get("/api/upscale/jobs").json()["jobs"]
     assert [job["job_id"] for job in jobs] == list(reversed(payload["job_ids"]))
+
+
+def test_download_batch_returns_zip_with_completed_results(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/batches",
+        data={"scale": "4", "mode": "faithful", "scene": "product"},
+        files=[
+            ("images", ("first.png", sample_image_bytes, "image/png")),
+            ("images", ("second.png", sample_image_bytes, "image/png")),
+        ],
+    ).json()
+    for job_id in created["job_ids"]:
+        client.post(f"/api/upscale/jobs/{job_id}/process")
+
+    response = client.get(f"/api/upscale/batches/{created['batch_id']}/download")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+    with zipfile.ZipFile(BytesIO(response.content)) as archive:
+        names = archive.namelist()
+    assert len(names) == 4
+    assert all(name.endswith(".png") for name in names)
+    assert all(name.startswith("up_") for name in names)
 
 
 def test_list_jobs_includes_thumbnail_and_risk_summary(client, sample_image_bytes):

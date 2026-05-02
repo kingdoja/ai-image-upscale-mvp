@@ -1,5 +1,8 @@
 from pathlib import Path
+from io import BytesIO
+import json
 from typing import Iterable, List, Tuple
+import zipfile
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -85,7 +88,50 @@ def create_batch_jobs(
         )
         for image in images
     ]
+    _write_batch_manifest(batch_id, [job.id for job in jobs])
     return batch_id, jobs
+
+
+def _batch_manifest_path(batch_id: str) -> Path:
+    return get_settings().storage_root / "batches" / f"{batch_id}.json"
+
+
+def _write_batch_manifest(batch_id: str, job_ids: List[str]) -> None:
+    path = _batch_manifest_path(batch_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"batch_id": batch_id, "job_ids": job_ids}, ensure_ascii=False), encoding="utf-8")
+
+
+def get_batch_job_ids(batch_id: str) -> List[str]:
+    path = _batch_manifest_path(batch_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Batch not found")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    job_ids = payload.get("job_ids", [])
+    if not isinstance(job_ids, list):
+        raise HTTPException(status_code=500, detail="Batch manifest is invalid")
+    return [str(job_id) for job_id in job_ids]
+
+
+def build_batch_results_zip(db: Session, batch_id: str) -> BytesIO:
+    buffer = BytesIO()
+    job_ids = get_batch_job_ids(batch_id)
+    added = 0
+    with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for job_id in job_ids:
+            job = get_job(db, job_id)
+            if job.status != "completed":
+                continue
+            for result in job.results:
+                path = Path(result.file_path)
+                if not path.exists():
+                    continue
+                archive.write(path, arcname=f"{job.id}-{result.result_type}{path.suffix}")
+                added += 1
+    if added == 0:
+        raise HTTPException(status_code=404, detail="No completed results are available for this batch")
+    buffer.seek(0)
+    return buffer
 
 
 def enqueue_job(job_id: str) -> None:
