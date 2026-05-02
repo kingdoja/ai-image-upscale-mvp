@@ -30,3 +30,6 @@ tools/refine_review_docx.py
 tools/refine_review_md.py
 tools/sync_alignment_docx.py
 tools/visualize_docx_diagrams.py
+tools/*company*docx*.py
+tools/*review*docx*.py
+tools/*polish*docx*.py

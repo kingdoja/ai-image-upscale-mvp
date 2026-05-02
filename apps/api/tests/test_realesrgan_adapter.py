@@ -1,4 +1,5 @@
 import sys
+import subprocess
 import textwrap
 
 import pytest
@@ -59,3 +60,29 @@ def test_realesrgan_adapter_runs_external_command(tmp_path):
     assert output.model_version == "fake-x4"
     with Image.open(output_path) as image:
         assert image.size == (32, 20)
+
+
+def test_realesrgan_adapter_does_not_override_working_directory(tmp_path, monkeypatch):
+    executable = tmp_path / "realesrgan.exe"
+    executable.write_text("fake executable", encoding="utf-8")
+    input_path = tmp_path / "input.png"
+    output_path = tmp_path / "output.png"
+    Image.new("RGB", (8, 5), color="white").save(input_path)
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(kwargs)
+        Image.open(input_path).save(output_path)
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    adapter = RealESRGANAdapter(
+        executable_path=executable,
+        model_path=tmp_path,
+        model="fake-x4",
+        timeout_seconds=10,
+    )
+
+    adapter.upscale(input_path, output_path, 4)
+
+    assert "cwd" not in calls[0]

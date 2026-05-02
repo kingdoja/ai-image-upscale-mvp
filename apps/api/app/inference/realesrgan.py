@@ -58,7 +58,6 @@ class RealESRGANAdapter:
             text=True,
             timeout=self.timeout_seconds,
             check=False,
-            cwd=str(self.executable_path.parent),
         )
         except subprocess.TimeoutExpired as exc:
             raise ModelConfigurationError("Real-ESRGAN command timed out") from exc
