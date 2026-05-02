@@ -118,11 +118,26 @@ export default function Page() {
           <strong>演示边界</strong>
           <p>公开样本只证明工程链路。九号内部评审需要使用授权产品/营销素材，并对 Logo、型号、仪表盘和文字做人工审核。</p>
         </div>
-        <div className="demo-steps">
-          <span>上传</span>
-          <span>处理</span>
-          <span>对比</span>
-          <span>反馈</span>
+        <div className="flow-guide" aria-label="演示流程">
+          <span className="flow-caption">流程指示</span>
+          <ol>
+            <li>
+              <span>1</span>
+              上传图片
+            </li>
+            <li>
+              <span>2</span>
+              处理任务
+            </li>
+            <li>
+              <span>3</span>
+              对比结果
+            </li>
+            <li>
+              <span>4</span>
+              提交反馈
+            </li>
+          </ol>
         </div>
         <nav className="side-nav">
           <button type="button" className={view === "workspace" ? "active" : ""} onClick={() => setView("workspace")}>

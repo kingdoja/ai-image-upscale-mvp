@@ -71,21 +71,56 @@ code {
   color: #c4d2e3;
 }
 
-.demo-steps {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+.flow-guide {
+  border-top: 1px solid #253243;
+  border-bottom: 1px solid #253243;
+  padding: 12px 0;
 }
 
-.demo-steps span {
-  border: 1px solid #273545;
-  border-radius: 6px;
-  padding: 8px;
-  text-align: center;
-  font-size: 13px;
+.flow-caption {
+  display: block;
+  color: #8290a3;
+  font-size: 12px;
   font-weight: 700;
-  background: #172334;
-  color: #d9e3ef;
+  margin-bottom: 10px;
+}
+
+.flow-guide ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.flow-guide li {
+  color: #c4d2e3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.flow-guide li:not(:last-child)::after {
+  content: "→";
+  color: #516176;
+  margin-left: 2px;
+}
+
+.flow-guide li span {
+  align-items: center;
+  background: #243248;
+  border: 1px solid #34445a;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
 }
 
 .side-nav {
