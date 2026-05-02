@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BatchUploadPanel } from "../components/BatchUploadPanel";
 import { FeedbackPanel } from "../components/FeedbackPanel";
 import { JobHistory } from "../components/JobHistory";
 import { JobStatus } from "../components/JobStatus";
@@ -20,7 +21,7 @@ export default function Page() {
   const [message, setMessage] = useState("等待上传图片");
   const [preview, setPreview] = useState<PreviewImage | null>(null);
   const [history, setHistory] = useState<JobSummaryRead[]>([]);
-  const [view, setView] = useState<"workspace" | "history" | "samples" | "evaluation">("workspace");
+  const [view, setView] = useState<"workspace" | "batch" | "history" | "samples" | "evaluation">("workspace");
 
   async function refreshJob(jobId: string) {
     const nextJob = await getJob(jobId);
@@ -137,6 +138,9 @@ export default function Page() {
           >
             最近任务
           </button>
+          <button type="button" className={view === "batch" ? "active" : ""} onClick={() => setView("batch")}>
+            批量处理
+          </button>
           <button type="button" className={view === "samples" ? "active" : ""} onClick={() => setView("samples")}>
             演示样本
           </button>
@@ -200,6 +204,49 @@ export default function Page() {
               />
               <ResultCompare job={job} preview={preview} />
               <FeedbackPanel job={job} onSubmitted={() => setMessage("反馈已提交")} />
+            </div>
+          </div>
+        ) : null}
+        {view === "batch" ? (
+          <div className="batch-layout">
+            <div className="panel">
+              <BatchUploadPanel
+                onError={setMessage}
+                onCreated={(batch) => {
+                  const firstJobId = batch.job_ids[0];
+                  if (firstJobId) {
+                    window.localStorage.setItem("ninebot-upscale-last-job-id", firstJobId);
+                  }
+                  setPreview(null);
+                  setMessage(`批量任务已创建：${batch.created_count} 张`);
+                  refreshHistory()
+                    .then(() => {
+                      if (firstJobId) {
+                        return refreshJob(firstJobId);
+                      }
+                      return undefined;
+                    })
+                    .then(() => setView("history"))
+                    .catch(() => setMessage("批量任务已创建，但历史任务加载失败"));
+                }}
+              />
+            </div>
+            <div className="panel">
+              <h2 className="section-title">批量处理说明</h2>
+              <div className="info-list">
+                <div>
+                  <strong>独立任务</strong>
+                  <span>每张图片都会成为独立任务，后续可以单独查看状态、结果和风险提示。</span>
+                </div>
+                <div>
+                  <strong>建议节奏</strong>
+                  <span>公司演示前先跑 5-10 张公开样本确认链路，再换成已授权素材。</span>
+                </div>
+                <div>
+                  <strong>人工复核</strong>
+                  <span>带 Logo、型号、仪表盘或文字的图片仍要人工复核，不自动作为最终商用图。</span>
+                </div>
+              </div>
             </div>
           </div>
         ) : null}

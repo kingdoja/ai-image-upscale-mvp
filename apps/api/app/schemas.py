@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -28,6 +28,12 @@ class JobCreateResponse(BaseModel):
     job_id: str
     status: Status
     estimated_seconds: int
+
+
+class BatchCreateResponse(BaseModel):
+    batch_id: str
+    job_ids: List[str]
+    created_count: int
 
 
 class ResultRead(BaseModel):
@@ -59,6 +65,8 @@ class JobSummaryRead(BaseModel):
     scene: str
     warnings: List[str]
     result_count: int
+    thumbnail_url: Optional[str] = None
+    risk_level: RiskLevel
     created_at: datetime
 
 

@@ -62,6 +62,32 @@ def create_job(
     return job
 
 
+def create_batch_jobs(
+    db: Session,
+    *,
+    images: List[UploadFile],
+    scale: int,
+    mode: str,
+    scene: str = "product",
+    uploader_id: str = "internal-user",
+) -> Tuple[str, List[Job]]:
+    if not images:
+        raise HTTPException(status_code=422, detail="at least one image is required")
+    batch_id = new_id("batch")
+    jobs = [
+        create_job(
+            db,
+            image=image,
+            scale=scale,
+            mode=mode,
+            scene=scene,
+            uploader_id=uploader_id,
+        )
+        for image in images
+    ]
+    return batch_id, jobs
+
+
 def enqueue_job(job_id: str) -> None:
     settings = get_settings()
     if not settings.enqueue_jobs:
@@ -125,6 +151,13 @@ def serialize_job(job: Job) -> dict:
 
 
 def serialize_job_summary(job: Job) -> dict:
+    risk_order = {"low": 0, "medium": 1, "high": 2}
+    risk_level = "low"
+    if job.results:
+        risk_level = max((result.risk_level for result in job.results), key=lambda value: risk_order.get(value, 0))
+    elif job.warnings:
+        risk_level = "medium"
+    thumbnail_url = _public_path(job.results[0].thumbnail_path) if job.results else None
     return {
         "job_id": job.id,
         "status": job.status,
@@ -133,6 +166,8 @@ def serialize_job_summary(job: Job) -> dict:
         "scene": job.scene,
         "warnings": job.warnings,
         "result_count": len(job.results),
+        "thumbnail_url": thumbnail_url,
+        "risk_level": risk_level,
         "created_at": job.created_at,
     }
 

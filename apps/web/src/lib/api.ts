@@ -6,6 +6,12 @@ export type CreateJobResponse = {
   estimated_seconds: number;
 };
 
+export type BatchCreateResponse = {
+  batch_id: string;
+  job_ids: string[];
+  created_count: number;
+};
+
 export type ResultRead = {
   id: string;
   type: "faithful" | "realistic" | "sharpened";
@@ -35,6 +41,8 @@ export type JobSummaryRead = {
   scene: string;
   warnings: string[];
   result_count: number;
+  thumbnail_url: string | null;
+  risk_level: "low" | "medium" | "high";
   created_at: string;
 };
 
@@ -44,6 +52,17 @@ export type JobListRead = {
 
 export async function createJob(formData: FormData): Promise<CreateJobResponse> {
   const response = await fetch(`${API_BASE_URL}/api/upscale/jobs`, {
+    method: "POST",
+    body: formData
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function createBatch(formData: FormData): Promise<BatchCreateResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/upscale/batches`, {
     method: "POST",
     body: formData
   });

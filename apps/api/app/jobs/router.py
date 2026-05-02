@@ -1,13 +1,25 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..config import get_settings
-from ..schemas import FeedbackCreate, FeedbackRead, JobCreateResponse, JobListRead, JobRead
-from .service import create_feedback, create_job, get_job, list_recent_jobs, process_job, serialize_job, serialize_job_summary
+from ..schemas import BatchCreateResponse, FeedbackCreate, FeedbackRead, JobCreateResponse, JobListRead, JobRead
+from .service import (
+    create_batch_jobs,
+    create_feedback,
+    create_job,
+    get_job,
+    list_recent_jobs,
+    process_job,
+    serialize_job,
+    serialize_job_summary,
+)
 
 
 router = APIRouter(prefix="/api/upscale/jobs", tags=["upscale-jobs"])
+batches_router = APIRouter(prefix="/api/upscale/batches", tags=["upscale-batches"])
 
 
 @router.get("", response_model=JobListRead)
@@ -27,6 +39,24 @@ def create_upscale_job(
     if get_settings().process_inline:
         job = process_job(db, job.id)
     return JobCreateResponse(job_id=job.id, status=job.status, estimated_seconds=90)
+
+
+@batches_router.post("", response_model=BatchCreateResponse)
+def create_upscale_batch(
+    images: List[UploadFile] = File(...),
+    scale: int = Form(...),
+    mode: str = Form(...),
+    scene: str = Form("product"),
+    db: Session = Depends(get_db),
+) -> BatchCreateResponse:
+    batch_id, jobs = create_batch_jobs(db, images=images, scale=scale, mode=mode, scene=scene)
+    if get_settings().process_inline:
+        jobs = [process_job(db, job.id) for job in jobs]
+    return BatchCreateResponse(
+        batch_id=batch_id,
+        job_ids=[job.id for job in jobs],
+        created_count=len(jobs),
+    )
 
 
 @router.get("/{job_id}", response_model=JobRead)

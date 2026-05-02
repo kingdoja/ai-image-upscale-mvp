@@ -152,6 +152,12 @@ code {
   gap: 18px;
 }
 
+.batch-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 520px) minmax(360px, 1fr);
+  gap: 18px;
+}
+
 .section-title {
   font-size: 16px;
   font-weight: 700;
@@ -289,6 +295,30 @@ code {
   padding-right: 2px;
 }
 
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.history-filters button {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475467;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.history-filters button.active {
+  border-color: #1967d2;
+  background: #eaf2ff;
+  color: #174ea6;
+}
+
 .history-item {
   border: 1px solid #d8e0e8;
   border-radius: 8px;
@@ -311,7 +341,25 @@ code {
   cursor: pointer;
   text-align: left;
   display: grid;
+  grid-template-columns: 76px 1fr;
   gap: 8px;
+}
+
+.history-thumb {
+  grid-row: span 2;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #eef3f7;
+  width: 76px;
+  height: 58px;
+}
+
+.history-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .history-main,
@@ -402,6 +450,55 @@ code {
   color: #64748b;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.batch-file-list {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  background: #f8fafc;
+  margin-bottom: 14px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.batch-file-summary,
+.batch-file-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.batch-file-summary {
+  border-bottom: 1px solid #d8e0e8;
+  background: #ffffff;
+}
+
+.batch-file-row {
+  border-bottom: 1px solid #edf2f7;
+  color: #475467;
+}
+
+.batch-file-row:last-child {
+  border-bottom: 0;
+}
+
+.batch-file-row span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-warning {
+  border: 1px solid #f4c56a;
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #8a5a00;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  font-size: 13px;
 }
 
 .result-grid {
@@ -615,7 +712,8 @@ code {
 @media (max-width: 900px) {
   .shell,
   .grid,
-  .history-layout {
+  .history-layout,
+  .batch-layout {
     grid-template-columns: 1fr;
   }
 
