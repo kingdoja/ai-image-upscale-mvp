@@ -169,7 +169,7 @@ export default function Page() {
             批量处理
           </button>
           <button type="button" className={view === "samples" ? "active" : ""} onClick={() => setView("samples")}>
-            演示样本
+            演示准备
           </button>
           <button type="button" className={view === "evaluation" ? "active" : ""} onClick={() => setView("evaluation")}>
             评测说明
@@ -301,18 +301,43 @@ export default function Page() {
         ) : null}
         {view === "samples" ? (
           <div className="panel">
-            <h2 className="section-title">演示样本</h2>
+            <h2 className="section-title">演示准备</h2>
             <p className="subtle">
-              公开样本只用于验证上传、处理、对比、反馈链路。给九号公司内部评审时，请使用已授权的产品图、营销图或电商详情页素材。
+              当前 MVP 不内置公司样本图，也不会自动读取本地目录。这里用于准备演示素材和跳转到实际操作入口。
             </p>
+            <div className="demo-actions">
+              <button className="secondary" type="button" onClick={() => setView("workspace")}>
+                上传单张图
+              </button>
+              <button className="secondary" type="button" onClick={() => setView("batch")}>
+                批量处理
+              </button>
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => {
+                  setView("history");
+                  refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
+                }}
+              >
+                查看最近任务
+              </button>
+              <button className="secondary" type="button" onClick={() => setView("evaluation")}>
+                去评分评测
+              </button>
+            </div>
             <div className="info-list">
               <div>
-                <strong>建议样本</strong>
-                <span>产品主体图、局部材质图、带 Logo/型号/仪表盘文字的图片。</span>
+                <strong>样本准备清单</strong>
+                <span>建议准备产品主体图、局部材质图、带 Logo/型号/仪表盘文字的图片，以及营销图或电商详情页图。</span>
               </div>
               <div>
-                <strong>测试路径</strong>
-                <span>可把临时样本放在项目内 `test-tmp` 目录，避免混入正式资产。</span>
+                <strong>本地公开样本</strong>
+                <span>`test-tmp/public-smoke-samples` 只用于工程链路验证，不代表九号内部素材的正式效果。</span>
+              </div>
+              <div>
+                <strong>公司演示素材</strong>
+                <span>给九号内部评审时，请手动上传已授权的产品图、营销图或电商详情页素材，并对 Logo、型号、文字和仪表盘区域做人工复核。</span>
               </div>
             </div>
           </div>
