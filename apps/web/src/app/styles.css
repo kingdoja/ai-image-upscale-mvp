@@ -198,6 +198,12 @@ code {
   gap: 18px;
 }
 
+.evaluation-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(440px, 1fr);
+  gap: 18px;
+}
+
 .section-title {
   font-size: 16px;
   font-weight: 700;
@@ -762,6 +768,105 @@ code {
   gap: 8px;
 }
 
+.evaluation-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.evaluation-rating {
+  min-width: 92px;
+  border: 1px solid #b9d7ff;
+  border-radius: 8px;
+  background: #f1f7ff;
+  padding: 10px;
+  text-align: center;
+}
+
+.evaluation-rating span {
+  display: block;
+  color: #365b8f;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.evaluation-rating strong {
+  color: #174ea6;
+  font-size: 20px;
+}
+
+.review-target {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.review-target label {
+  color: #263445;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-target select,
+.score-row select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 9px 10px;
+}
+
+.score-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.score-row {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+}
+
+.score-row label {
+  color: #263445;
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.score-row span {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.compact-field {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px 12px;
+}
+
+.error-text {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .success-text {
   color: #027a48;
   font-size: 13px;
@@ -772,7 +877,8 @@ code {
   .shell,
   .grid,
   .history-layout,
-  .batch-layout {
+  .batch-layout,
+  .evaluation-layout {
     grid-template-columns: 1fr;
   }
 

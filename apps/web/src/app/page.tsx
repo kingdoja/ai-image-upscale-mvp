@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BatchUploadPanel } from "../components/BatchUploadPanel";
+import { EvaluationReportPanel } from "../components/EvaluationReportPanel";
 import { FeedbackPanel } from "../components/FeedbackPanel";
 import { JobHistory } from "../components/JobHistory";
 import { JobStatus } from "../components/JobStatus";
@@ -293,20 +294,25 @@ export default function Page() {
           </div>
         ) : null}
         {view === "evaluation" ? (
-          <div className="panel">
-            <h2 className="section-title">评测说明</h2>
-            <p className="subtle">
-              当前阶段重点评估清晰度提升、产品结构一致性、Logo/文字正确性、材质真实感和是否需要人工修图。
-            </p>
-            <div className="info-list">
-              <div>
-                <strong>小样本冒烟</strong>
-                <span>先用 10 张授权素材判断链路和效果是否稳定。</span>
+          <div className="evaluation-layout">
+            <div className="panel">
+              <h2 className="section-title">评测说明</h2>
+              <p className="subtle">
+                当前阶段重点评估清晰度提升、产品结构一致性、Logo/文字正确性、材质真实感、颜色一致性和是否需要人工修图。
+              </p>
+              <div className="info-list">
+                <div>
+                  <strong>小样本冒烟</strong>
+                  <span>先用 10 张授权素材判断链路和效果是否稳定，每张图至少保存一条评估记录。</span>
+                </div>
+                <div>
+                  <strong>正式评测</strong>
+                  <span>小样本通过后再扩展到 100 张评测集，并导出人工评分报告。</span>
+                </div>
               </div>
-              <div>
-                <strong>正式评测</strong>
-                <span>小样本通过后再扩展到 100 张评测集，并导出人工评分报告。</span>
-              </div>
+            </div>
+            <div className="panel">
+              <EvaluationReportPanel job={job} onSubmitted={() => setMessage("评估记录已提交")} />
             </div>
           </div>
         ) : null}

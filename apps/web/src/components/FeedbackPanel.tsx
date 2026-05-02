@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { submitFeedback, type JobRead } from "../lib/api";
 
-const ISSUE_TAGS = [
+export const ISSUE_TAGS = [
   ["good", "效果好"],
   ["text_blur", "文字模糊"],
   ["logo_error", "Logo/型号错误"],
