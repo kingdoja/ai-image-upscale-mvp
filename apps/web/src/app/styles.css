@@ -597,13 +597,6 @@ code {
   line-height: 1.6;
 }
 
-.demo-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 18px 0 6px;
-}
-
 .batch-file-list {
   border: 1px solid var(--line);
   border-radius: 8px;

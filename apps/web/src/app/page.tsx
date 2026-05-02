@@ -32,7 +32,7 @@ export default function Page() {
   const [preview, setPreview] = useState<PreviewImage | null>(null);
   const [history, setHistory] = useState<JobSummaryRead[]>([]);
   const [lastBatchId, setLastBatchId] = useState<string | null>(null);
-  const [view, setView] = useState<"workspace" | "batch" | "history" | "samples" | "evaluation">("workspace");
+  const [view, setView] = useState<"workspace" | "batch" | "history" | "evaluation">("workspace");
 
   async function refreshJob(jobId: string) {
     const nextJob = await getJob(jobId);
@@ -176,9 +176,6 @@ export default function Page() {
           <button type="button" className={view === "batch" ? "active" : ""} onClick={() => setView("batch")}>
             批量处理
           </button>
-          <button type="button" className={view === "samples" ? "active" : ""} onClick={() => setView("samples")}>
-            演示准备
-          </button>
           <button type="button" className={view === "evaluation" ? "active" : ""} onClick={() => setView("evaluation")}>
             评测说明
           </button>
@@ -303,49 +300,6 @@ export default function Page() {
                   <strong>人工复核</strong>
                   <span>带 Logo、型号、仪表盘或文字的图片仍要人工复核，不自动作为最终商用图。</span>
                 </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-        {view === "samples" ? (
-          <div className="panel">
-            <h2 className="section-title">演示准备</h2>
-            <p className="subtle">
-              当前 MVP 不内置公司样本图，也不会自动读取本地目录。这里用于准备演示素材和跳转到实际操作入口。
-            </p>
-            <div className="demo-actions">
-              <button className="secondary" type="button" onClick={() => setView("workspace")}>
-                上传单张图
-              </button>
-              <button className="secondary" type="button" onClick={() => setView("batch")}>
-                批量处理
-              </button>
-              <button
-                className="secondary"
-                type="button"
-                onClick={() => {
-                  setView("history");
-                  refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
-                }}
-              >
-                查看最近任务
-              </button>
-              <button className="secondary" type="button" onClick={() => setView("evaluation")}>
-                去评分评测
-              </button>
-            </div>
-            <div className="info-list">
-              <div>
-                <strong>样本准备清单</strong>
-                <span>建议准备产品主体图、局部材质图、带 Logo/型号/仪表盘文字的图片，以及营销图或电商详情页图。</span>
-              </div>
-              <div>
-                <strong>本地公开样本</strong>
-                <span>`test-tmp/public-smoke-samples` 只用于工程链路验证，不代表九号内部素材的正式效果。</span>
-              </div>
-              <div>
-                <strong>公司演示素材</strong>
-                <span>给九号内部评审时，请手动上传已授权的产品图、营销图或电商详情页素材，并对 Logo、型号、文字和仪表盘区域做人工复核。</span>
               </div>
             </div>
           </div>
