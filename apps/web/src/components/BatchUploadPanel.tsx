@@ -17,10 +17,10 @@ export function BatchUploadPanel({ onCreated, onError }: Props) {
 
   const validationMessage = useMemo(() => {
     if (files.length === 0) {
-      return "请选择 5-20 张图片。";
+      return "请选择 2-20 张图片。";
     }
-    if (files.length < 5) {
-      return "批量处理至少选择 5 张图片；少量测试可继续使用上传工作台。";
+    if (files.length < 2) {
+      return "批量处理至少选择 2 张图片；单张图片请使用上传工作台。";
     }
     if (files.length > 20) {
       return "单批最多支持 20 张图片，请拆分后再提交。";
@@ -50,7 +50,7 @@ export function BatchUploadPanel({ onCreated, onError }: Props) {
   return (
     <section>
       <h2 className="section-title">批量处理</h2>
-      <p className="subtle">适合一次处理 5-20 张公开样本或已授权素材。每张图会生成独立任务，方便单独查看、重试和反馈。</p>
+      <p className="subtle">适合一次处理 2-20 张公开样本或已授权素材。每张图会生成独立任务，方便单独查看、重试和反馈。</p>
       <div className="field">
         <label htmlFor="batch-images">图片文件</label>
         <input
