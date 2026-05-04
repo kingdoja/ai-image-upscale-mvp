@@ -581,6 +581,58 @@ code {
   color: #6b4e16;
 }
 
+.semantic-panel {
+  background: #f6f8fb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.semantic-panel > div:first-child {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.semantic-panel strong {
+  color: #17202e;
+}
+
+.semantic-panel span,
+.semantic-note {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.semantic-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.semantic-grid section {
+  background: #ffffff;
+  border: 1px solid #e4eaf1;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.semantic-grid p {
+  color: #17202e;
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.semantic-note {
+  margin: 0;
+}
+
 .info-list {
   display: grid;
   gap: 12px;
@@ -912,6 +964,101 @@ code {
   border-radius: 6px;
   background: #ffffff;
   padding: 9px 10px;
+}
+
+.local-eval-card {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+}
+
+.command-box {
+  background: #ffffff;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow: auto;
+}
+
+.command-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.command-row .command-box {
+  flex: 1 1 auto;
+}
+
+.report-list {
+  display: grid;
+  gap: 10px;
+}
+
+.report-link {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  text-decoration: none;
+}
+
+.report-link:hover {
+  border-color: #9ec5ff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.report-link strong {
+  color: #17202e;
+  font-size: 13px;
+}
+
+.report-link span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.report-link code {
+  color: #174ea6;
+}
+
+.primary-report {
+  border-color: #cce2ff;
+  background: #f7fbff;
+}
+
+.metric-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric-row div {
+  background: #eef6ff;
+  border: 1px solid #cce2ff;
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+}
+
+.metric-row span {
+  color: #365b8f;
+  font-size: 11px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.metric-row strong {
+  color: #174ea6;
+  font-size: 16px;
 }
 
 .score-grid {

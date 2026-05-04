@@ -1,0 +1,5 @@
+sample,scene,status,expected_regions,detected_regions,missed_regions,false_positive_regions,detector_sources,protected_regions,review_required,notes
+samples/cc0-product-label.jpg,marketing,evaluated,text;logo,logo,text,,logo:vision_detector,"logo:103,80,569,330",True,PublicDomainPictures sample with large advertising text and brand-like label graphics.
+samples/cc0-new-label.jpg,marketing,evaluated,text;logo,,text;logo,,,,True,PublicDomainPictures sample with prominent NEW text and badge-like graphic.
+samples/commons-main-label.jpg,ecommerce,evaluated,text;logo,,text;logo,,,,True,"Wikimedia Commons label sample with text, size/spec information, and central graphic mark."
+samples/commons-produk-packaging.jpg,ecommerce,evaluated,text;logo,,text;logo,,,,True,"Wikimedia Commons packaging sample with product labels, warning text, and package icons."

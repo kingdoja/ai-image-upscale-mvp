@@ -1,5 +1,8 @@
 from io import BytesIO
+from pathlib import Path
 import zipfile
+
+from PIL import Image, ImageDraw
 
 
 def test_download_batch_evaluation_report_as_markdown(client, sample_image_bytes):
@@ -71,6 +74,52 @@ def test_download_batch_evaluation_report_as_csv(client, sample_image_bytes):
     assert response.headers["content-type"].startswith("text/csv")
     assert "job_id,status,scale,mode,scene,risk_level,rating,usable,issues" in response.text
     assert f"{created['job_ids'][0]},completed,4,faithful,product,low,5,True,good" in response.text
+
+
+def test_download_batch_evaluation_report_csv_includes_semantic_risk_reasons(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/batches",
+        data={"scale": "4", "mode": "realistic", "scene": "marketing"},
+        files=[("images", ("poster.png", sample_image_bytes, "image/png"))],
+    ).json()
+    client.post(f"/api/upscale/jobs/{created['job_ids'][0]}/process")
+
+    response = client.get(f"/api/upscale/reports/{created['batch_id']}?format=csv")
+
+    assert response.status_code == 200
+    assert "semantic_risks,protected_regions,routing_reasons" in response.text
+    assert "text_region_requires_review;logo_region_requires_review" in response.text
+    assert "text:0,6,16,4" in response.text
+    assert "logo:0,0,4,2" in response.text
+    assert "protected_risk_regions" in response.text
+
+
+def test_batch_evaluation_report_reads_persisted_semantic_manifest(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/batches",
+        data={"scale": "4", "mode": "realistic", "scene": "marketing"},
+        files=[("images", ("poster.png", sample_image_bytes, "image/png"))],
+    ).json()
+    client.post(f"/api/upscale/jobs/{created['job_ids'][0]}/process")
+
+    from app.database import SessionLocal
+    from app.models import Job
+
+    with SessionLocal() as session:
+        job = session.get(Job, created["job_ids"][0])
+        original_path = Path(job.original_file_path)
+    image = Image.new("RGB", (800, 600), color=(245, 245, 245))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((40, 36, 180, 92), fill=(10, 10, 10))
+    draw.rectangle((120, 430, 700, 478), fill=(20, 20, 20))
+    image.save(original_path)
+
+    response = client.get(f"/api/upscale/reports/{created['batch_id']}?format=csv")
+
+    assert response.status_code == 200
+    assert "text:0,6,16,4" in response.text
+    assert "logo:0,0,4,2" in response.text
+    assert "text:120,430,581,49" not in response.text
 
 
 def test_download_batch_risk_samples_csv_for_training_dataset(client, sample_image_bytes):
@@ -307,6 +356,68 @@ def test_job_detail_includes_original_url_and_result_model_metadata(client, samp
     assert payload["original_url"].startswith("/storage/originals/")
     assert payload["results"][0]["model_name"]
     assert payload["results"][0]["model_version"]
+    assert payload["understanding"]["scene"] == "product"
+    assert payload["understanding"]["controller_version"] == "semantic-controller-v0.10.0"
+    assert payload["understanding"]["data_usage_policy"] == "inference_only"
+    assert "low_resolution_input" in payload["understanding"]["degradation_types"]
+    assert payload["upscale_plan"]["candidate_types"][0] == "faithful"
+    assert payload["upscale_plan"]["policy_version"] == "routing-policy-v0.10.0"
+    assert payload["routing_decision"]["candidate_types"][0] == "faithful"
+    assert payload["routing_decision"]["policy_version"] == "routing-policy-v0.10.0"
+    assert payload["data_governance"]["training_state"] == "not_approved_for_training"
+
+
+def test_marketing_job_detail_exposes_semantic_review_plan(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/jobs",
+        data={"scale": "4", "mode": "realistic", "scene": "marketing"},
+        files={"image": ("poster.png", sample_image_bytes, "image/png")},
+    ).json()
+    client.post(f"/api/upscale/jobs/{created['job_id']}/process")
+
+    payload = client.get(f"/api/upscale/jobs/{created['job_id']}").json()
+
+    assert payload["understanding"]["review_required"] is True
+    assert "text_region_requires_review" in payload["understanding"]["detected_risks"]
+    assert payload["upscale_plan"]["candidate_types"][0] == "faithful"
+    assert "realistic" in payload["upscale_plan"]["candidate_types"]
+    assert payload["upscale_plan"]["protected_region_details"][0]["type"] == "text"
+    assert payload["upscale_plan"]["protected_region_details"][0]["bbox"] == [0, 6, 16, 4]
+    assert payload["upscale_plan"]["protected_region_details"][0]["source"] == "layout_heuristic"
+    assert "protected_risk_regions" in payload["routing_decision"]["reasons"]
+    assert payload["routing_decision"]["executed_candidate_types"] == ["faithful"]
+    assert payload["routing_decision"]["skipped_candidate_types"] == ["realistic"]
+    assert payload["routing_decision"]["skip_reasons"]["realistic"] == "backend_disabled_or_not_configured"
+
+
+def test_job_detail_reads_persisted_semantic_manifest_after_original_changes(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/jobs",
+        data={"scale": "4", "mode": "realistic", "scene": "marketing"},
+        files={"image": ("poster.png", sample_image_bytes, "image/png")},
+    ).json()
+    client.post(f"/api/upscale/jobs/{created['job_id']}/process")
+
+    from app.database import SessionLocal
+    from app.models import Job
+
+    with SessionLocal() as session:
+        job = session.get(Job, created["job_id"])
+        original_path = Path(job.original_file_path)
+    manifest_path = original_path.parents[3] / "manifests" / f"{created['job_id']}.json"
+    assert manifest_path.exists()
+
+    image = Image.new("RGB", (800, 600), color=(245, 245, 245))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((40, 36, 180, 92), fill=(10, 10, 10))
+    draw.rectangle((120, 430, 700, 478), fill=(20, 20, 20))
+    image.save(original_path)
+
+    payload = client.get(f"/api/upscale/jobs/{created['job_id']}").json()
+
+    assert payload["upscale_plan"]["protected_region_details"][0]["bbox"] == [0, 6, 16, 4]
+    assert payload["upscale_plan"]["protected_region_details"][0]["source"] == "layout_heuristic"
+    assert payload["upscale_plan"]["protected_region_details"][1]["bbox"] == [0, 0, 4, 2]
 
 
 def test_create_job_rejects_invalid_scale(client, sample_image_bytes):

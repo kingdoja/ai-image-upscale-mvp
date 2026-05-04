@@ -7,8 +7,11 @@ test-tmp/
 storage/originals/
 storage/results/
 storage/thumbnails/
+storage/manifests/
+storage/batches/
 models/
 .realesrgan-check/
+tools/installers/
 node_modules/
 .next/
 dist/

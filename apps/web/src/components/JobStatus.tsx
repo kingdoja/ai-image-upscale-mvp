@@ -1,6 +1,6 @@
 import { CircleDashed, Play, ShieldAlert } from "lucide-react";
 import type { JobRead } from "../lib/api";
-import { modeLabel, statusLabel, warningLabel } from "../lib/presentation";
+import { modeLabel, resultTypeLabel, semanticLabel, statusLabel, warningLabel } from "../lib/presentation";
 
 type Props = {
   job: JobRead | null;
@@ -54,6 +54,61 @@ export function JobStatus({ job, onProcess }: Props) {
           <span>模式</span>
           <span>{modeLabel(job.mode)}</span>
         </div>
+      </div>
+      <div className="semantic-panel">
+        <div>
+          <strong>智能总控</strong>
+          <span>{job.understanding.review_required ? "已标记复核区域" : "低风险保真处理"}</span>
+        </div>
+        <div className="semantic-grid">
+          <section>
+            <span>图像理解</span>
+            <p>
+              {[...job.understanding.degradation_types, ...job.understanding.subject_hints]
+                .map(semanticLabel)
+                .join(" / ")}
+            </p>
+          </section>
+          <section>
+            <span>修复计划</span>
+            <p>
+              {job.upscale_plan.candidate_types.map(resultTypeLabel).join(" / ")} ·{" "}
+              {semanticLabel(job.upscale_plan.enhancement_policy)}
+            </p>
+          </section>
+          <section>
+            <span>路由原因</span>
+            <p>{job.routing_decision.reasons.map(semanticLabel).join(" / ")}</p>
+          </section>
+          <section>
+            <span>数据治理</span>
+            <p>
+              {semanticLabel(job.data_governance.usage_scope)} · {semanticLabel(job.data_governance.training_state)}
+            </p>
+          </section>
+        </div>
+        {job.upscale_plan.protected_regions.length > 0 ? (
+          <p className="semantic-note">
+            保护区域：
+            {job.upscale_plan.protected_region_details
+              .map((region) => {
+                const bbox = region.bbox ? ` / ${region.bbox.join(",")}` : "";
+                return `${semanticLabel(region.type)} / ${semanticLabel(region.policy)} / ${semanticLabel(region.source)}${bbox}`;
+              })
+              .join("；")}
+          </p>
+        ) : null}
+        {job.routing_decision.skipped_candidate_types.length > 0 ? (
+          <p className="semantic-note">
+            未生成候选：
+            {job.routing_decision.skipped_candidate_types
+              .map((type) => `${resultTypeLabel(type)}（${semanticLabel(job.routing_decision.skip_reasons[type] ?? "")}）`)
+              .join("；")}
+          </p>
+        ) : null}
+        <p className="semantic-note">
+          版本：{job.understanding.controller_version} · {job.routing_decision.policy_version}
+        </p>
       </div>
       {job.status === "queued" ? (
         <div className="pending-panel">

@@ -3,6 +3,7 @@ import { submitFeedback, type JobRead } from "../lib/api";
 import {
   buildEvaluationFeedbackComment,
   calculateEvaluationRating,
+  getLocalRegionEvalEntrypoint,
   type EvaluationScoreKey,
   type EvaluationScores
 } from "../lib/evaluation";
@@ -37,6 +38,52 @@ const DEFAULT_SCORES: EvaluationScores = {
   color: 4,
   usability: 4
 };
+
+function LocalRegionEvalEntrypointCard() {
+  const entrypoint = getLocalRegionEvalEntrypoint();
+  const reportLinks = [entrypoint.primaryReport, ...entrypoint.secondaryReports];
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+
+  async function copyCommand() {
+    await navigator.clipboard.writeText(entrypoint.clipboardText);
+    setCopyState("copied");
+    window.setTimeout(() => setCopyState("idle"), 1200);
+  }
+
+  return (
+    <section className="local-eval-card">
+      <div>
+        <h2 className="section-title">Local Detector Eval</h2>
+        <p className="subtle">Run the local protected-region baseline and open the primary report first.</p>
+      </div>
+      <div className="command-row">
+        <div className="command-box">
+          <code>{entrypoint.command}</code>
+        </div>
+        <button type="button" className="secondary small-button" onClick={copyCommand}>
+          {copyState === "copied" ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <div className="report-list">
+        {reportLinks.map((report, index) => (
+          <a key={report.path} href={report.href} className={index === 0 ? "report-link primary-report" : "report-link"}>
+            <strong>{report.label}</strong>
+            <code>{report.path}</code>
+            <span>{report.description}</span>
+          </a>
+        ))}
+      </div>
+      <div className="metric-row">
+        {entrypoint.baselineMetrics.map((metric) => (
+          <div key={metric.key}>
+            <span>{metric.key}</span>
+            <strong>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function EvaluationReportPanel({ job, onSubmitted }: Props) {
   const [selectedResultId, setSelectedResultId] = useState("");
@@ -93,23 +140,31 @@ export function EvaluationReportPanel({ job, onSubmitted }: Props) {
 
   if (!job) {
     return (
+      <>
+      <LocalRegionEvalEntrypointCard />
       <section>
         <h2 className="section-title">评估打分</h2>
         <p className="subtle">请先上传图片或从最近任务中选择一个已完成任务，再提交评估记录。</p>
       </section>
+      </>
     );
   }
 
   if (job.results.length === 0) {
     return (
+      <>
+      <LocalRegionEvalEntrypointCard />
       <section>
         <h2 className="section-title">评估打分</h2>
         <p className="subtle">当前任务还没有候选结果。请先处理任务，生成结果后再按六维指标评估。</p>
       </section>
+      </>
     );
   }
 
   return (
+    <>
+    <LocalRegionEvalEntrypointCard />
     <section>
       <div className="evaluation-heading">
         <div>
@@ -193,5 +248,6 @@ export function EvaluationReportPanel({ job, onSubmitted }: Props) {
       {savedJobId === job.job_id ? <p className="success-text">评估记录已保存，可用于后续报告导出和样本复盘。</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
     </section>
+    </>
   );
 }

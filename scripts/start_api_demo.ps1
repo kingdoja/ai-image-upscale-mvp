@@ -3,7 +3,10 @@ param(
   [ValidateSet("realesrgan", "stub")]
   [string]$Backend = "realesrgan",
   [switch]$Queued,
-  [string]$DatabaseUrl = "sqlite:///./test-tmp/local-demo.db"
+  [string]$DatabaseUrl = "sqlite:///./test-tmp/local-demo.db",
+  [ValidateSet("local", "external", "tesseract")]
+  [string]$RegionDetectorBackend = "tesseract",
+  [string]$TesseractExecutable = "D:\Tools\Tesseract-OCR\tesseract.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +27,14 @@ $env:DATABASE_URL = $DatabaseUrl
 $env:ENQUEUE_JOBS = "false"
 $env:UPSCALE_PROCESS_INLINE = if ($Queued) { "false" } else { "true" }
 $env:UPSCALE_FAITHFUL_BACKEND = $Backend
+$env:UPSCALE_REGION_DETECTOR_BACKEND = $RegionDetectorBackend
+
+if ($RegionDetectorBackend -eq "tesseract") {
+  if (-not (Test-Path -LiteralPath $TesseractExecutable)) {
+    throw "Tesseract executable not found: $TesseractExecutable. Run scripts\check_tesseract.ps1 -Executable `"$TesseractExecutable`" or pass -RegionDetectorBackend local."
+  }
+  $env:UPSCALE_TESSERACT_COMMAND = (Resolve-Path $TesseractExecutable).Path
+}
 
 if ($Backend -eq "realesrgan") {
   $Executable = Join-Path $ProjectRoot "models\realesrgan\realesrgan-ncnn-vulkan.exe"
@@ -41,6 +52,7 @@ if ($Backend -eq "realesrgan") {
 
 Write-Host "Starting API demo on http://127.0.0.1:$Port"
 Write-Host "Backend: $Backend; inline processing: $($env:UPSCALE_PROCESS_INLINE); database: $DatabaseUrl"
+Write-Host "Region detector: $RegionDetectorBackend"
 Push-Location $ApiRoot
 try {
   & $Python -m uvicorn app.main:app --host 127.0.0.1 --port $Port

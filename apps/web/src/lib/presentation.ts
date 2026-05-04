@@ -71,3 +71,44 @@ export function warningLabel(warning: string): string {
   }
   return warning;
 }
+
+export function semanticLabel(value: string): string {
+  const labels: Record<string, string> = {
+    low_resolution_input: "低分辨率输入",
+    compressed_source: "压缩来源",
+    standard_resolution_input: "标准分辨率输入",
+    text_region_requires_review: "文字区域需复核",
+    logo_region_requires_review: "Logo 区域需复核",
+    manual_review_required: "需要人工复核",
+    generic_product_subject: "产品主体",
+    marketing_layout: "营销版式",
+    possible_brand_text: "可能包含品牌文字",
+    ecommerce_detail_image: "电商详情图",
+    possible_product_specs: "可能包含型号参数",
+    general_image_subject: "通用图片主体",
+    text: "文字",
+    logo: "Logo",
+    conservative_preserve_structure: "保守增强，优先保护结构",
+    balanced_detail_enhancement: "平衡增强，提升细节",
+    protected_risk_regions: "已保护高风险区域",
+    realistic_candidate_is_review_only: "写实候选仅供复核",
+    "requested_mode:faithful": "按保真模式路由",
+    "requested_mode:realistic": "按写实模式请求，先保留保真候选",
+    "requested_mode:both": "按双候选模式路由",
+    "policy:conservative_preserve_structure": "策略：保守保护结构",
+    "policy:balanced_detail_enhancement": "策略：平衡细节增强",
+    scene_rule: "场景规则",
+    layout_heuristic: "布局启发式",
+    vision_detector: "本地区域检测",
+    graphic_mark_detector: "彩色图形标记检测",
+    tesseract_ocr: "Tesseract OCR",
+    preserve: "保真保护",
+    inference_only: "仅本次推理",
+    local_inference_and_evaluation: "本地推理与评测",
+    not_approved_for_training: "未批准训练使用",
+    local_project_storage: "本地项目存储",
+    backend_disabled_or_not_configured: "后端未启用或未配置",
+    candidate_not_generated: "候选未生成"
+  };
+  return labels[value] ?? value;
+}

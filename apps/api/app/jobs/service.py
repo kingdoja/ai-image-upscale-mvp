@@ -18,6 +18,7 @@ from ..inference.stub import StubUpscaleAdapter
 from ..models import Feedback, Job, Result, new_id
 from ..quality import evaluate_image
 from ..schemas import ALLOWED_ISSUES, FeedbackCreate
+from ..semantic_controller import build_data_governance_summary, build_semantic_context, create_upscale_plan, understand_image
 from ..storage import create_thumbnail, result_path, save_upload, thumbnail_path
 
 
@@ -152,6 +153,81 @@ def _latest_feedback(job: Job) -> Optional[Feedback]:
     return max(job.feedback, key=lambda feedback: feedback.created_at)
 
 
+def _semantic_manifest_path(job_id: str) -> Path:
+    return get_settings().storage_root / "manifests" / f"{job_id}.json"
+
+
+def _write_semantic_manifest(job_id: str, payload: dict) -> None:
+    path = _semantic_manifest_path(job_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _read_semantic_manifest(job_id: str) -> Optional[dict]:
+    path = _semantic_manifest_path(job_id)
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else None
+
+
+def _routing_execution_payload(job: Job, routing, executed_candidate_types: Optional[List[str]] = None) -> dict:
+    executed = executed_candidate_types if executed_candidate_types is not None else [result.result_type for result in job.results]
+    enabled_candidate_types = _enabled_candidate_types()
+    if job.status in {"completed", "failed"}:
+        skipped = [
+            candidate_type
+            for candidate_type in routing.candidate_types
+            if candidate_type not in executed
+        ]
+    else:
+        skipped = []
+    skip_reasons = {
+        candidate_type: "backend_disabled_or_not_configured"
+        if candidate_type not in enabled_candidate_types
+        else "candidate_not_generated"
+        for candidate_type in skipped
+    }
+    return routing.copy(
+        update={
+            "executed_candidate_types": executed,
+            "skipped_candidate_types": skipped,
+            "skip_reasons": skip_reasons,
+        }
+    ).dict()
+
+
+def _build_semantic_payload(job: Job, executed_candidate_types: Optional[List[str]] = None) -> dict:
+    understanding, plan, routing = build_semantic_context(
+        Path(job.original_file_path),
+        scene=job.scene,
+        requested_mode=job.mode,
+    )
+    return {
+        "job_id": job.id,
+        "understanding": understanding.dict(),
+        "upscale_plan": plan.dict(),
+        "routing_decision": _routing_execution_payload(job, routing, executed_candidate_types),
+        "data_governance": build_data_governance_summary().dict(),
+    }
+
+
+def _semantic_payload_for_job(job: Job) -> dict:
+    return _read_semantic_manifest(job.id) or _build_semantic_payload(job)
+
+
+def _format_protected_regions_for_report(plan: dict) -> str:
+    formatted = []
+    for region in plan.get("protected_region_details", []):
+        bbox = region.get("bbox")
+        region_type = region.get("type", "unknown")
+        if bbox:
+            formatted.append(f"{region_type}:{','.join(str(value) for value in bbox)}")
+        else:
+            formatted.append(f"{region_type}:unlocalized")
+    return ";".join(formatted)
+
+
 def build_batch_evaluation_report(db: Session, batch_id: str) -> dict:
     job_ids = get_batch_job_ids(batch_id)
     jobs = [get_job(db, job_id) for job_id in job_ids]
@@ -165,6 +241,10 @@ def build_batch_evaluation_report(db: Session, batch_id: str) -> dict:
         feedback = _latest_feedback(job)
         risk_level = _job_risk_level(job)
         issues = feedback.issues if feedback else []
+        semantic_payload = _semantic_payload_for_job(job)
+        understanding = semantic_payload["understanding"]
+        plan = semantic_payload["upscale_plan"]
+        routing = semantic_payload["routing_decision"]
         issue_counts.update(issues)
         if feedback:
             ratings.append(feedback.rating)
@@ -183,6 +263,9 @@ def build_batch_evaluation_report(db: Session, batch_id: str) -> dict:
                 "rating": feedback.rating if feedback else "",
                 "usable": feedback.usable if feedback else "",
                 "issues": ";".join(issues),
+                "semantic_risks": ";".join(understanding["detected_risks"]),
+                "protected_regions": _format_protected_regions_for_report(plan),
+                "routing_reasons": ";".join(routing["reasons"]),
                 "comment": feedback.comment if feedback else "",
             }
         )
@@ -213,7 +296,7 @@ def render_evaluation_report_markdown(report: dict) -> str:
         (
             f"| {row['job_id']} | {row['status']} | {row['mode']} | {row['scene']} | "
             f"{row['risk_level']} | {row['rating'] or '-'} | {row['usable'] if row['usable'] != '' else '-'} | "
-            f"{row['issues'] or '-'} |"
+            f"{row['issues'] or '-'} | {row['semantic_risks'] or '-'} | {row['protected_regions'] or '-'} |"
         )
         for row in report["rows"]
     ]
@@ -240,8 +323,8 @@ def render_evaluation_report_markdown(report: dict) -> str:
             "",
             "## 样本明细",
             "",
-            "| Job ID | 状态 | 模式 | 场景 | 风险 | 评分 | 可用 | 问题标签 |",
-            "|---|---|---|---|---|---:|---|---|",
+            "| Job ID | 状态 | 模式 | 场景 | 风险 | 评分 | 可用 | 问题标签 | 语义风险 | 保护区域 |",
+            "|---|---|---|---|---|---:|---|---|---|---|",
             *row_lines,
             "",
             "> 本报告仅供本地评测和训练数据复盘使用，含 Logo/文字/型号/仪表盘区域的样本需人工复核。",
@@ -253,7 +336,23 @@ def render_evaluation_report_markdown(report: dict) -> str:
 def render_evaluation_report_csv(report: dict) -> str:
     output = StringIO()
     writer = csv.writer(output, lineterminator="\n")
-    writer.writerow(["job_id", "status", "scale", "mode", "scene", "risk_level", "rating", "usable", "issues", "comment"])
+    writer.writerow(
+        [
+            "job_id",
+            "status",
+            "scale",
+            "mode",
+            "scene",
+            "risk_level",
+            "rating",
+            "usable",
+            "issues",
+            "semantic_risks",
+            "protected_regions",
+            "routing_reasons",
+            "comment",
+        ]
+    )
     for row in report["rows"]:
         writer.writerow(
             [
@@ -266,6 +365,9 @@ def render_evaluation_report_csv(report: dict) -> str:
                 row["rating"],
                 row["usable"],
                 row["issues"],
+                row["semantic_risks"],
+                row["protected_regions"],
+                row["routing_reasons"],
                 row["comment"],
             ]
         )
@@ -467,6 +569,7 @@ def _public_path(path: str) -> str:
 
 
 def serialize_job(job: Job) -> dict:
+    semantic_payload = _semantic_payload_for_job(job)
     return {
         "job_id": job.id,
         "status": job.status,
@@ -487,6 +590,10 @@ def serialize_job(job: Job) -> dict:
             }
             for result in job.results
         ],
+        "understanding": semantic_payload["understanding"],
+        "upscale_plan": semantic_payload["upscale_plan"],
+        "routing_decision": semantic_payload["routing_decision"],
+        "data_governance": semantic_payload["data_governance"],
     }
 
 
@@ -514,24 +621,38 @@ def serialize_job_summary(job: Job) -> dict:
     }
 
 
-def _adapters_for_mode(mode: str) -> Iterable[Tuple[str, object]]:
+def _enabled_candidate_types() -> set:
     settings = get_settings()
-    if mode in {"faithful", "both"}:
-        if settings.faithful_backend == "realesrgan":
-            yield "faithful", RealESRGANAdapter(
-                executable_path=Path(settings.realesrgan_executable) if settings.realesrgan_executable else None,
-                model_path=Path(settings.realesrgan_model_path) if settings.realesrgan_model_path else None,
-                model=settings.realesrgan_model,
-                timeout_seconds=settings.realesrgan_timeout_seconds,
-            )
-        else:
-            yield "faithful", StubUpscaleAdapter(sharpen=True)
-        yield "sharpened", StubUpscaleAdapter(sharpen=True)
-    if mode in {"realistic", "both"}:
-        if settings.realistic_backend == "stub":
-            yield "realistic", StubUpscaleAdapter(sharpen=True)
-        elif settings.realistic_backend != "disabled":
-            yield "realistic", DiffusionUpscaleAdapter()
+    enabled = {"faithful", "sharpened"}
+    if settings.realistic_backend != "disabled":
+        enabled.add("realistic")
+    return enabled
+
+
+def _adapters_for_candidates(candidate_types: Iterable[str]) -> Iterable[Tuple[str, object]]:
+    settings = get_settings()
+    yielded = set()
+    for candidate_type in candidate_types:
+        if candidate_type in yielded:
+            continue
+        yielded.add(candidate_type)
+        if candidate_type == "faithful":
+            if settings.faithful_backend == "realesrgan":
+                yield "faithful", RealESRGANAdapter(
+                    executable_path=Path(settings.realesrgan_executable) if settings.realesrgan_executable else None,
+                    model_path=Path(settings.realesrgan_model_path) if settings.realesrgan_model_path else None,
+                    model=settings.realesrgan_model,
+                    timeout_seconds=settings.realesrgan_timeout_seconds,
+                )
+            else:
+                yield "faithful", StubUpscaleAdapter(sharpen=True)
+        elif candidate_type == "sharpened":
+            yield "sharpened", StubUpscaleAdapter(sharpen=True)
+        elif candidate_type == "realistic":
+            if settings.realistic_backend == "stub":
+                yield "realistic", StubUpscaleAdapter(sharpen=True)
+            elif settings.realistic_backend != "disabled":
+                yield "realistic", DiffusionUpscaleAdapter()
 
 
 def process_job(db: Session, job_id: str) -> Job:
@@ -539,10 +660,16 @@ def process_job(db: Session, job_id: str) -> Job:
     job.status = "running"
     db.commit()
 
+    generated_result_types: List[str] = []
+    understanding = None
+    plan = None
     try:
         created_results = 0
         input_path = Path(job.original_file_path)
-        for result_type, adapter in _adapters_for_mode(job.mode):
+        understanding = understand_image(input_path, scene=job.scene)
+        plan = create_upscale_plan(understanding, requested_mode=job.mode)
+        job.warnings = sorted(set(job.warnings + plan.warnings))
+        for result_type, adapter in _adapters_for_candidates(plan.candidate_types):
             result_id = new_id("res")
             output_path = result_path(result_id)
             thumb_path = thumbnail_path(result_id)
@@ -569,6 +696,7 @@ def process_job(db: Session, job_id: str) -> Job:
                 job.warnings = sorted(set(job.warnings + output.warnings + quality.warnings))
                 db.add(result)
                 created_results += 1
+                generated_result_types.append(result_type)
             except ModelConfigurationError as exc:
                 job.warnings = sorted(set(job.warnings + [str(exc)]))
         if created_results == 0:
@@ -577,6 +705,9 @@ def process_job(db: Session, job_id: str) -> Job:
     except Exception as exc:
         job.status = "failed"
         job.warnings = sorted(set(job.warnings + [f"worker_failed: {exc}"]))
+    if understanding is not None and plan is not None:
+        semantic_payload = _build_semantic_payload(job, executed_candidate_types=generated_result_types)
+        _write_semantic_manifest(job.id, semantic_payload)
     db.commit()
     db.refresh(job)
     return job

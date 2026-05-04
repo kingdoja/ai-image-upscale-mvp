@@ -3,6 +3,8 @@ import subprocess
 import time
 from typing import List, Optional
 
+from PIL import Image, ImageStat
+
 from .base import ModelConfigurationError, UpscaleOutput
 
 
@@ -70,6 +72,7 @@ class RealESRGANAdapter:
             raise ModelConfigurationError(f"Real-ESRGAN command failed: {message}")
         if not output_path.exists():
             raise ModelConfigurationError("Real-ESRGAN command completed without creating output")
+        self._validate_output_image(output_path)
 
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         return UpscaleOutput(
@@ -80,3 +83,17 @@ class RealESRGANAdapter:
             elapsed_ms=elapsed_ms,
             warnings=[],
         )
+
+    def _validate_output_image(self, output_path: Path) -> None:
+        try:
+            with Image.open(output_path) as image:
+                rgb = image.convert("RGB")
+                extrema = rgb.getextrema()
+                stat = ImageStat.Stat(rgb)
+        except OSError as exc:
+            raise ModelConfigurationError(f"Real-ESRGAN output is not a readable image: {exc}") from exc
+
+        channel_ranges = [high - low for low, high in extrema]
+        mean_brightness = sum(stat.mean) / 3
+        if max(channel_ranges) <= 1 and mean_brightness <= 2:
+            raise ModelConfigurationError("Real-ESRGAN command created a blank output image")

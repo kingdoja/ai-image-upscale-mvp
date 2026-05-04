@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -47,6 +47,52 @@ class ResultRead(BaseModel):
     risk_level: RiskLevel
 
 
+class ProtectedRegionRead(BaseModel):
+    type: str
+    bbox: Optional[List[int]] = None
+    confidence: float
+    source: str
+    policy: str
+
+
+class ImageUnderstandingRead(BaseModel):
+    controller_version: str
+    scene: str
+    detected_risks: List[str]
+    degradation_types: List[str]
+    subject_hints: List[str]
+    review_required: bool
+    data_usage_policy: str
+    image_width: Optional[int] = None
+    image_height: Optional[int] = None
+    detected_regions: List[ProtectedRegionRead]
+
+
+class UpscalePlanRead(BaseModel):
+    policy_version: str
+    candidate_types: List[ResultType]
+    protected_regions: List[str]
+    protected_region_details: List[ProtectedRegionRead]
+    enhancement_policy: str
+    warnings: List[str]
+
+
+class RoutingDecisionRead(BaseModel):
+    policy_version: str
+    candidate_types: List[ResultType]
+    reasons: List[str]
+    executed_candidate_types: List[ResultType]
+    skipped_candidate_types: List[ResultType]
+    skip_reasons: Dict[str, str]
+
+
+class DataGovernanceRead(BaseModel):
+    usage_scope: str
+    training_state: str
+    retention_policy: str
+    requires_approval_for_training: bool
+
+
 class JobRead(BaseModel):
     job_id: str
     status: Status
@@ -55,6 +101,10 @@ class JobRead(BaseModel):
     original_url: str
     warnings: List[str]
     results: List[ResultRead]
+    understanding: ImageUnderstandingRead
+    upscale_plan: UpscalePlanRead
+    routing_decision: RoutingDecisionRead
+    data_governance: DataGovernanceRead
 
 
 class JobSummaryRead(BaseModel):

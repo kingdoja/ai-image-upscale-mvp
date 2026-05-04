@@ -23,6 +23,52 @@ export type ResultRead = {
   risk_level: "low" | "medium" | "high";
 };
 
+export type ImageUnderstandingRead = {
+  controller_version: string;
+  scene: string;
+  detected_risks: string[];
+  degradation_types: string[];
+  subject_hints: string[];
+  review_required: boolean;
+  data_usage_policy: string;
+  image_width: number | null;
+  image_height: number | null;
+  detected_regions: ProtectedRegionRead[];
+};
+
+export type ProtectedRegionRead = {
+  type: string;
+  bbox: number[] | null;
+  confidence: number;
+  source: string;
+  policy: string;
+};
+
+export type UpscalePlanRead = {
+  policy_version: string;
+  candidate_types: ResultRead["type"][];
+  protected_regions: string[];
+  protected_region_details: ProtectedRegionRead[];
+  enhancement_policy: string;
+  warnings: string[];
+};
+
+export type RoutingDecisionRead = {
+  policy_version: string;
+  candidate_types: ResultRead["type"][];
+  reasons: string[];
+  executed_candidate_types: ResultRead["type"][];
+  skipped_candidate_types: ResultRead["type"][];
+  skip_reasons: Record<string, string>;
+};
+
+export type DataGovernanceRead = {
+  usage_scope: string;
+  training_state: string;
+  retention_policy: string;
+  requires_approval_for_training: boolean;
+};
+
 export type JobRead = {
   job_id: string;
   status: "queued" | "running" | "completed" | "failed";
@@ -31,6 +77,10 @@ export type JobRead = {
   original_url: string;
   warnings: string[];
   results: ResultRead[];
+  understanding: ImageUnderstandingRead;
+  upscale_plan: UpscalePlanRead;
+  routing_decision: RoutingDecisionRead;
+  data_governance: DataGovernanceRead;
 };
 
 export type JobSummaryRead = {

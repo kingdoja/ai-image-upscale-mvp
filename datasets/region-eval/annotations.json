@@ -1,0 +1,96 @@
+{
+  "description": "Local detector evaluation manifest using public sample images for text/logo protection smoke evaluation.",
+  "samples": [
+    {
+      "file": "samples/cc0-product-label.jpg",
+      "scene": "marketing",
+      "expected_regions": ["text", "logo"],
+      "expected_bboxes": {
+        "text": [100, 80, 1045, 1370],
+        "logo": [103, 80, 1045, 530]
+      },
+      "review_required": true,
+      "source_url": "https://www.publicdomainpictures.net/pictures/320000/velka/product-label.jpg",
+      "notes": "PublicDomainPictures sample with large advertising text and brand-like label graphics."
+    },
+    {
+      "file": "samples/cc0-new-label.jpg",
+      "scene": "marketing",
+      "expected_regions": ["text", "logo"],
+      "expected_bboxes": {
+        "text": [512, 385, 850, 510],
+        "logo": [408, 91, 1100, 1099]
+      },
+      "review_required": true,
+      "source_url": "https://www.publicdomainpictures.net/pictures/210000/velka/new-label.jpg",
+      "notes": "PublicDomainPictures sample with prominent NEW text and badge-like graphic."
+    },
+    {
+      "file": "samples/commons-main-label.jpg",
+      "scene": "ecommerce",
+      "expected_regions": ["text", "logo"],
+      "expected_bboxes": {
+        "text": [184, 168, 1228, 754],
+        "logo": [610, 330, 410, 420]
+      },
+      "review_required": true,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Main_label.jpg",
+      "notes": "Wikimedia Commons label sample with text, size/spec information, and central graphic mark."
+    },
+    {
+      "file": "samples/commons-produk-packaging.jpg",
+      "scene": "ecommerce",
+      "expected_regions": ["text", "logo"],
+      "expected_bboxes": {
+        "text": [0, 135, 800, 398],
+        "logo": [420, 285, 150, 75]
+      },
+      "review_required": true,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Produk_Packaging.jpg",
+      "notes": "Wikimedia Commons packaging sample with product labels, warning text, and package icons."
+    },
+    {
+      "file": "samples/synthetic-text-only-poster.png",
+      "scene": "marketing",
+      "expected_regions": ["text"],
+      "expected_bboxes": {
+        "text": [80, 80, 670, 315]
+      },
+      "review_required": true,
+      "source_url": "generated:tools/generate_region_eval_synthetic_samples.py",
+      "notes": "Synthetic marketing poster with large text but no logo mark; used to measure text-only handling and logo false positives."
+    },
+    {
+      "file": "samples/synthetic-packaging-text-only.png",
+      "scene": "ecommerce",
+      "expected_regions": ["text"],
+      "expected_bboxes": {
+        "text": [300, 205, 330, 145]
+      },
+      "review_required": true,
+      "source_url": "generated:tools/generate_region_eval_synthetic_samples.py",
+      "notes": "Synthetic packaging shelf sample with model/caution text but no intentional logo."
+    },
+    {
+      "file": "samples/synthetic-plain-product-negative.png",
+      "scene": "product",
+      "expected_regions": [],
+      "expected_bboxes": {},
+      "review_required": false,
+      "source_url": "generated:tools/generate_region_eval_synthetic_samples.py",
+      "notes": "Synthetic plain product negative sample with no text or logo risk."
+    },
+    {
+      "file": "samples/synthetic-packaging-logo-text.png",
+      "scene": "ecommerce",
+      "expected_regions": ["text", "logo"],
+      "expected_bboxes": {
+        "text": [280, 155, 190, 225],
+        "logo": [110, 92, 114, 104]
+      },
+      "review_required": true,
+      "source_url": "generated:tools/generate_region_eval_synthetic_samples.py",
+      "notes": "Synthetic packaging sample with a clear graphic mark plus model/caution text."
+    }
+  ]
+}
