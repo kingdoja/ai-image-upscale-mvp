@@ -18,7 +18,7 @@ class OptionalModelAdapter:
     def upscale(self, input_path: Path, output_path: Path, scale: int) -> UpscaleOutput:
         if not self.enabled:
             raise ModelConfigurationError(f"{self.model_name} backend is not configured")
-        raise ModelConfigurationError(f"{self.model_name} runtime integration is not enabled in MVP stub mode")
+        raise ModelConfigurationError(f"{self.model_name} runtime integration is not enabled in stub mode")
 
 
 class DisabledOptionalModelAdapter:

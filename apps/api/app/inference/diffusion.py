@@ -14,4 +14,4 @@ class DiffusionUpscaleAdapter:
     def upscale(self, input_path: Path, output_path: Path, scale: int) -> UpscaleOutput:
         if not self.checkpoint_dir or not self.checkpoint_dir.exists():
             raise ModelConfigurationError("Diffusion checkpoint directory is not configured")
-        raise ModelConfigurationError("Diffusion runtime integration is not enabled in MVP stub mode")
+        raise ModelConfigurationError("Diffusion runtime integration is not enabled in stub mode")

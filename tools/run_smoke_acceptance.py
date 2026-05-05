@@ -153,7 +153,7 @@ def build_markdown_report(samples_dir: Path, rows: List[dict]) -> str:
         if row["scene"] in {"marketing", "ecommerce"} or row["warnings"] not in {"", "-"}
     ]
     lines = [
-        "# MVP 高清放大 10 张冒烟评测报告",
+        "# PixelLift AI 高清放大 10 张冒烟评测报告",
         "",
         f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"样本目录：`{samples_dir}`",
@@ -206,7 +206,7 @@ def build_markdown_report(samples_dir: Path, rows: List[dict]) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MVP smoke acceptance against a directory of sample images.")
+    parser = argparse.ArgumentParser(description="Run PixelLift AI smoke acceptance against a directory of sample images.")
     parser.add_argument("--samples-dir", required=True, type=Path)
     parser.add_argument("--output", type=Path, default=Path("tests/acceptance/smoke-report.md"))
     parser.add_argument("--scale", type=int, default=4, choices=(2, 4))

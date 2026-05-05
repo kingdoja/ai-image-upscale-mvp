@@ -28,7 +28,7 @@ class RealESRGANAdapter:
 
     def upscale(self, input_path: Path, output_path: Path, scale: int) -> UpscaleOutput:
         if scale not in {2, 4}:
-            raise ModelConfigurationError("Real-ESRGAN adapter only supports 2x or 4x scale in MVP")
+            raise ModelConfigurationError("Real-ESRGAN adapter only supports 2x or 4x scale")
         if not self.executable_path or not self.executable_path.exists():
             raise ModelConfigurationError("Real-ESRGAN executable is not configured")
         if not input_path.exists():

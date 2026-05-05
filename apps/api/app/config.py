@@ -6,7 +6,7 @@ from pydantic import BaseSettings, Field
 
 
 class Settings(BaseSettings):
-    service_name: str = "ai-image-upscale-api"
+    service_name: str = "pixel-lift-api"
     database_url: str = Field(default="sqlite:///./upscale.db", env="DATABASE_URL")
     storage_root: Path = Field(default=Path("../../storage"), env="STORAGE_ROOT")
     redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")

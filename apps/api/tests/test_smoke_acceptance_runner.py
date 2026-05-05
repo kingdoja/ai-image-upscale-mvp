@@ -48,7 +48,7 @@ def test_build_markdown_report_contains_summary_and_manual_review_placeholders(t
         ],
     )
 
-    assert "# MVP 高清放大 10 张冒烟评测报告" in report
+    assert "# PixelLift AI 高清放大 10 张冒烟评测报告" in report
     assert "| 样本 | 场景 | 状态 | 耗时 | Warning | 结果 | 人工结论 |" in report
     assert "logo-text-risk.png" in report
     assert "清晰度评分" in report
