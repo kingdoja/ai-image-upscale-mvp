@@ -1,22 +1,39 @@
-import { ImagePlus, SlidersHorizontal, Upload } from "lucide-react";
+import { ImagePlus, Settings, SlidersHorizontal, Upload } from "lucide-react";
 import { useState } from "react";
 import type { PreviewImage } from "../app/page";
-import { createJob, type CreateJobResponse } from "../lib/api";
+import { createJob, type CreateJobResponse, type ModelStatus } from "../lib/api";
+import { CANDIDATE_OPTIONS, DEFAULT_CANDIDATES, orderedCandidates, type SelectableCandidate } from "../lib/candidates";
 import { formatFileSize } from "../lib/presentation";
+import { ModelStatusPanel } from "./ModelStatusPanel";
 
 type Props = {
   preview: PreviewImage | null;
   onPreviewChanged: (preview: PreviewImage | null) => void;
   onCreated: (job: CreateJobResponse) => void;
   onError: (message: string) => void;
+  modelStatuses: ModelStatus[];
+  modelStatusLoading: boolean;
+  modelStatusError: string | null;
+  onRefreshModelStatuses: () => void;
 };
 
-export function Uploader({ preview, onPreviewChanged, onCreated, onError }: Props) {
+export function Uploader({
+  preview,
+  onPreviewChanged,
+  onCreated,
+  onError,
+  modelStatuses,
+  modelStatusLoading,
+  modelStatusError,
+  onRefreshModelStatuses
+}: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [scale, setScale] = useState("4");
   const [mode, setMode] = useState("both");
   const [scene, setScene] = useState("product");
+  const [candidates, setCandidates] = useState<SelectableCandidate[]>(DEFAULT_CANDIDATES);
   const [loading, setLoading] = useState(false);
+  const [showModelStatus, setShowModelStatus] = useState(false);
 
   function selectFile(nextFile: File | null) {
     setFile(nextFile);
@@ -40,6 +57,7 @@ export function Uploader({ preview, onPreviewChanged, onCreated, onError }: Prop
     form.append("scale", scale);
     form.append("mode", mode);
     form.append("scene", scene);
+    orderedCandidates(candidates).forEach((candidate) => form.append("candidates", candidate));
     setLoading(true);
     try {
       onCreated(await createJob(form));
@@ -48,6 +66,15 @@ export function Uploader({ preview, onPreviewChanged, onCreated, onError }: Prop
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleCandidate(candidate: SelectableCandidate) {
+    setCandidates((current) => {
+      if (current.includes(candidate)) {
+        return current.filter((item) => item !== candidate);
+      }
+      return orderedCandidates([...current, candidate]);
+    });
   }
 
   return (
@@ -122,8 +149,53 @@ export function Uploader({ preview, onPreviewChanged, onCreated, onError }: Prop
             <option value="other">其他</option>
           </select>
         </div>
+        <div className="field">
+          <div className="field-row">
+            <label>生成模型</label>
+            <button
+              type="button"
+              className={`link-button model-status-toggle ${showModelStatus ? "active" : ""}`}
+              onClick={() => setShowModelStatus((current) => !current)}
+              aria-expanded={showModelStatus}
+            >
+              <Settings size={14} />
+              {showModelStatus ? "收回" : "设置"}
+            </button>
+          </div>
+          <div className="segments">
+            {CANDIDATE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                className={`segment ${candidates.includes(option.value) ? "active" : ""}`}
+                onClick={() => toggleCandidate(option.value)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="inline-actions">
+            <button type="button" className="link-button" onClick={() => setCandidates(CANDIDATE_OPTIONS.map((option) => option.value))}>
+              全选
+            </button>
+            <button type="button" className="link-button" onClick={() => setCandidates(DEFAULT_CANDIDATES)}>
+              默认
+            </button>
+          </div>
+          {showModelStatus ? (
+            <div className="model-status-inline">
+              <ModelStatusPanel
+                models={modelStatuses}
+                loading={modelStatusLoading}
+                error={modelStatusError}
+                onRefresh={onRefreshModelStatuses}
+                compact
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
-      <button className="primary" disabled={!file || loading} onClick={submit}>
+      <button className="primary" disabled={!file || loading || candidates.length === 0} onClick={submit}>
         <Upload size={16} /> {loading ? "创建中" : "创建任务"}
       </button>
     </section>

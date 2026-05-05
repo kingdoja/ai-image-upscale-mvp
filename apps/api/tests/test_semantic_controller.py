@@ -65,6 +65,45 @@ def test_high_risk_plan_keeps_faithful_candidate_before_realistic(tmp_path):
     assert "protected_risk_regions" in routing.reasons
 
 
+def test_product_faithful_plan_uses_only_faithful_model_without_removed_fallbacks(tmp_path):
+    input_path = tmp_path / "product.png"
+    Image.new("RGB", (800, 600), color=(180, 180, 185)).save(input_path)
+    report = understand_image(input_path, scene="product")
+
+    plan = create_upscale_plan(report, requested_mode="faithful")
+
+    assert plan.candidate_types == ["faithful"]
+    assert "sharpened" not in get_model_capability_registry()
+    assert "material_guard" not in get_model_capability_registry()
+
+
+def test_both_mode_plans_optional_multimodel_comparison_candidates(tmp_path):
+    input_path = tmp_path / "product.png"
+    Image.new("RGB", (800, 600), color=(180, 180, 185)).save(input_path)
+    report = understand_image(input_path, scene="product")
+
+    plan = create_upscale_plan(report, requested_mode="both")
+
+    assert plan.candidate_types == [
+        "faithful",
+        "realistic",
+        "swinir",
+        "hat",
+    ]
+    assert "sharpened" not in plan.candidate_types
+    assert "material_guard" not in plan.candidate_types
+
+
+def test_selected_candidates_override_mode_candidate_expansion(tmp_path):
+    input_path = tmp_path / "product.png"
+    Image.new("RGB", (800, 600), color=(180, 180, 185)).save(input_path)
+    report = understand_image(input_path, scene="product")
+
+    plan = create_upscale_plan(report, requested_mode="both", selected_candidates=["hat", "faithful"])
+
+    assert plan.candidate_types == ["faithful", "hat"]
+
+
 def test_model_capability_registry_explains_candidate_tradeoffs():
     registry = get_model_capability_registry()
 
@@ -72,6 +111,8 @@ def test_model_capability_registry_explains_candidate_tradeoffs():
     assert "preserve_product_structure" in registry["faithful"].strengths
     assert registry["realistic"].requires_manual_review is True
     assert "photo_realistic_detail_recovery" in registry["realistic"].strengths
+    assert registry["swinir"].requires_manual_review is True
+    assert registry["hat"].requires_manual_review is True
 
 
 def test_missing_image_keeps_protection_regions_without_fake_coordinates(tmp_path):

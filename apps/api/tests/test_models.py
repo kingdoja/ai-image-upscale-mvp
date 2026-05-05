@@ -13,6 +13,7 @@ def test_job_result_feedback_relationships(db_session):
         status="queued",
     )
     job.warnings = ["text_or_logo_review_recommended"]
+    job.selected_candidates = ["faithful", "hat"]
     result = Result(
         id="res_test",
         job_id="up_test",
@@ -41,5 +42,6 @@ def test_job_result_feedback_relationships(db_session):
 
     loaded = db_session.get(Job, "up_test")
     assert loaded.warnings == ["text_or_logo_review_recommended"]
+    assert loaded.selected_candidates == ["faithful", "hat"]
     assert loaded.results[0].result_type == "faithful"
     assert loaded.feedback[0].issues == ["good"]

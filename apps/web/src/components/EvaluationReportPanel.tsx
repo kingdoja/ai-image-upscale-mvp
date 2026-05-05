@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { submitFeedback, type JobRead } from "../lib/api";
+import { visibleOrderedResults } from "../lib/candidates";
 import {
   buildEvaluationFeedbackComment,
   calculateEvaluationRating,
@@ -7,7 +8,7 @@ import {
   type EvaluationScoreKey,
   type EvaluationScores
 } from "../lib/evaluation";
-import { resultTypeLabel, riskLabel } from "../lib/presentation";
+import { resultDisplayLabel, riskLabel } from "../lib/presentation";
 import { ISSUE_TAGS } from "./FeedbackPanel";
 
 type Props = {
@@ -96,10 +97,11 @@ export function EvaluationReportPanel({ job, onSubmitted }: Props) {
   const [error, setError] = useState("");
 
   const selectedResult = useMemo(() => {
-    if (!job?.results.length) {
+    const visibleResults = job ? visibleOrderedResults(job.results) : [];
+    if (!visibleResults.length) {
       return null;
     }
-    return job.results.find((result) => result.id === selectedResultId) ?? job.results[0];
+    return visibleResults.find((result) => result.id === selectedResultId) ?? visibleResults[0];
   }, [job, selectedResultId]);
 
   const rating = calculateEvaluationRating(scores);
@@ -184,9 +186,9 @@ export function EvaluationReportPanel({ job, onSubmitted }: Props) {
           value={selectedResult?.id ?? ""}
           onChange={(event) => setSelectedResultId(event.target.value)}
         >
-          {job.results.map((result) => (
+          {visibleOrderedResults(job.results).map((result) => (
             <option value={result.id} key={result.id}>
-              {resultTypeLabel(result.type)} · {riskLabel(result.risk_level)} · {result.model_name}
+              {resultDisplayLabel(result)} · {riskLabel(result.risk_level)} · {result.model_name}
             </option>
           ))}
         </select>

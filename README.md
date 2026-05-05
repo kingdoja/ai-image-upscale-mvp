@@ -221,3 +221,10 @@ $env:TEMP=$env:TMP
 ```powershell
 .\scripts\install_realesrgan.ps1 -Proxy "http://127.0.0.1:7897"
 ```
+
+## 当前前端约定
+
+- 生成模型默认只选 `Real-ESRGAN`
+- `SwinIR` 和 `HAT` 需要手动勾选
+- 生成区右侧的 `设置` 可以查看模型配置状态，默认折叠
+- 结果下载现在走后端下载接口，适合前后端分端口启动

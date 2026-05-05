@@ -280,6 +280,13 @@ code {
   margin-bottom: 14px;
 }
 
+.field-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
 .field label {
   font-size: 13px;
   color: #263445;
@@ -1219,6 +1226,117 @@ code {
   font-size: 19px;
 }
 
+.model-status-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.model-status-inline {
+  margin-top: 10px;
+}
+
+.model-status-panel.compact {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  gap: 10px;
+  padding: 10px;
+}
+
+.model-status-compact-heading {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.model-status-compact-heading > span {
+  color: #263445;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.model-status-toggle {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.model-status-toggle.active {
+  color: var(--blue-strong);
+}
+
+.model-status-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.model-status-card {
+  background: #fbfcfe;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.model-status-title {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.model-status-title strong {
+  color: var(--ink);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-status-badge {
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.model-status-ready {
+  background: #e7f8ef;
+  color: var(--green);
+}
+
+.model-status-demo {
+  background: #fff7e6;
+  color: #a15c07;
+}
+
+.model-status-disabled,
+.model-status-missing_config {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.model-status-meta {
+  color: #667085;
+  display: grid;
+  font-size: 12px;
+  gap: 4px;
+  line-height: 1.5;
+}
+
+.model-status-panel.compact .model-status-grid {
+  grid-template-columns: 1fr;
+}
+
+.model-status-panel.compact .model-status-card {
+  padding: 10px;
+}
+
 .panel-heading {
   align-items: flex-start;
   display: flex;
@@ -1481,5 +1599,9 @@ code {
 
   .metric-strip {
     display: grid;
+  }
+
+  .model-status-grid {
+    grid-template-columns: 1fr;
   }
 }

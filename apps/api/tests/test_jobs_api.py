@@ -219,6 +219,38 @@ def test_create_job_accepts_valid_upload(client, sample_image_bytes):
     assert payload["job_id"].startswith("up_")
 
 
+def test_create_job_persists_selected_candidates_and_processes_only_selected(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/jobs",
+        data={"scale": "4", "mode": "both", "scene": "product", "candidates": ["hat", "faithful"]},
+        files={"image": ("product.png", sample_image_bytes, "image/png")},
+    ).json()
+
+    processed = client.post(f"/api/upscale/jobs/{created['job_id']}/process").json()
+
+    assert processed["upscale_plan"]["candidate_types"] == ["faithful", "hat"]
+    assert [result["type"] for result in processed["results"]] == ["faithful"]
+    assert processed["routing_decision"]["skipped_candidate_types"] == ["hat"]
+
+
+def test_create_job_rejects_removed_or_invalid_selected_candidate(client, sample_image_bytes):
+    response = client.post(
+        "/api/upscale/jobs",
+        data={"scale": "4", "mode": "both", "scene": "product", "candidates": ["material_guard"]},
+        files={"image": ("product.png", sample_image_bytes, "image/png")},
+    )
+
+    assert response.status_code == 422
+
+    removed = client.post(
+        "/api/upscale/jobs",
+        data={"scale": "4", "mode": "both", "scene": "product", "candidates": ["sharpened"]},
+        files={"image": ("product.png", sample_image_bytes, "image/png")},
+    )
+
+    assert removed.status_code == 422
+
+
 def test_create_job_can_process_inline_for_local_demo(client, sample_image_bytes, monkeypatch):
     from app.config import get_settings
 
@@ -303,7 +335,7 @@ def test_download_batch_returns_zip_with_completed_results(client, sample_image_
     assert response.headers["content-type"] == "application/zip"
     with zipfile.ZipFile(BytesIO(response.content)) as archive:
         names = archive.namelist()
-    assert len(names) == 4
+    assert len(names) == 2
     assert all(name.endswith(".png") for name in names)
     assert all(name.startswith("up_") for name in names)
 
@@ -339,6 +371,41 @@ def test_process_job_endpoint_completes_queued_job(client, sample_image_bytes):
     payload = response.json()
     assert payload["status"] == "completed"
     assert payload["results"][0]["type"] == "faithful"
+
+
+def test_download_result_endpoint_returns_attachment(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/jobs",
+        data={"scale": "4", "mode": "faithful", "scene": "product"},
+        files={"image": ("product.png", sample_image_bytes, "image/png")},
+    ).json()
+    processed = client.post(f"/api/upscale/jobs/{created['job_id']}/process").json()
+    result_id = processed["results"][0]["id"]
+
+    with client.stream("GET", f"/api/upscale/results/{result_id}/download") as response:
+        content = response.read()
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"].startswith("attachment;")
+    assert result_id in response.headers["content-disposition"]
+    assert content
+
+
+def test_download_job_result_endpoint_returns_first_ordered_result(client, sample_image_bytes):
+    created = client.post(
+        "/api/upscale/jobs",
+        data={"scale": "4", "mode": "faithful", "scene": "product"},
+        files={"image": ("product.png", sample_image_bytes, "image/png")},
+    ).json()
+    processed = client.post(f"/api/upscale/jobs/{created['job_id']}/process").json()
+
+    with client.stream("GET", f"/api/upscale/jobs/{created['job_id']}/download") as response:
+        content = response.read()
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"].startswith("attachment;")
+    assert processed["results"][0]["id"] in response.headers["content-disposition"]
+    assert content
 
 
 def test_job_detail_includes_original_url_and_result_model_metadata(client, sample_image_bytes):
@@ -450,3 +517,60 @@ def test_get_unknown_job_returns_404(client):
     response = client.get("/api/upscale/jobs/up_missing")
 
     assert response.status_code == 404
+
+
+def test_model_status_reports_default_demo_and_disabled_models(client):
+    response = client.get("/api/upscale/models/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [model["id"] for model in payload["models"]] == ["faithful", "swinir", "hat"]
+    assert payload["models"][0]["label"] == "Real-ESRGAN"
+    assert payload["models"][0]["status"] == "demo"
+    assert payload["models"][0]["configured"] is True
+    assert payload["models"][0]["backend"] == "stub"
+    assert payload["models"][1]["status"] == "disabled"
+    assert payload["models"][2]["status"] == "disabled"
+
+
+def test_model_status_reports_external_models_ready(client, tmp_path, monkeypatch):
+    from app.config import get_settings
+
+    executable = tmp_path / "realesrgan.exe"
+    executable.write_text("fake executable", encoding="utf-8")
+    realesrgan_models = tmp_path / "realesrgan-models"
+    realesrgan_models.mkdir()
+    (realesrgan_models / "realesrgan-x4plus.param").write_text("fake param", encoding="utf-8")
+    swinir_repo = tmp_path / "swinir-repo"
+    swinir_repo.mkdir()
+    swinir_model = tmp_path / "swinir.pth"
+    swinir_model.write_text("fake weights", encoding="utf-8")
+    hat_repo = tmp_path / "hat-repo"
+    hat_repo.mkdir()
+    hat_model = tmp_path / "hat.pth"
+    hat_model.write_text("fake weights", encoding="utf-8")
+
+    monkeypatch.setenv("UPSCALE_FAITHFUL_BACKEND", "realesrgan")
+    monkeypatch.setenv("REALESRGAN_EXECUTABLE", str(executable))
+    monkeypatch.setenv("REALESRGAN_MODEL_PATH", str(realesrgan_models))
+    monkeypatch.setenv("UPSCALE_SWINIR_BACKEND", "external")
+    monkeypatch.setenv("UPSCALE_SWINIR_COMMAND", "python run_swinir.py")
+    monkeypatch.setenv("UPSCALE_SWINIR_MODEL_PATH", str(swinir_model))
+    monkeypatch.setenv("UPSCALE_SWINIR_REPO_PATH", str(swinir_repo))
+    monkeypatch.setenv("UPSCALE_HAT_BACKEND", "external")
+    monkeypatch.setenv("UPSCALE_HAT_COMMAND", "python run_hat.py")
+    monkeypatch.setenv("UPSCALE_HAT_MODEL_PATH", str(hat_model))
+    monkeypatch.setenv("UPSCALE_HAT_REPO_PATH", str(hat_repo))
+    get_settings.cache_clear()
+
+    response = client.get("/api/upscale/models/status")
+
+    assert response.status_code == 200
+    statuses = {model["id"]: model for model in response.json()["models"]}
+    assert statuses["faithful"]["status"] == "ready"
+    assert statuses["faithful"]["configured"] is True
+    assert statuses["swinir"]["status"] == "ready"
+    assert statuses["swinir"]["configured"] is True
+    assert statuses["hat"]["status"] == "ready"
+    assert statuses["hat"]["configured"] is True
+    get_settings.cache_clear()

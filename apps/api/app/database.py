@@ -1,6 +1,6 @@
 from typing import Generator, Optional
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
@@ -32,6 +32,20 @@ def init_db() -> None:
     import app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _ensure_sqlite_columns()
+
+
+def _ensure_sqlite_columns() -> None:
+    if engine.dialect.name != "sqlite":
+        return
+    inspector = inspect(engine)
+    if "jobs" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("jobs")}
+    if "selected_candidates" in columns:
+        return
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE jobs ADD COLUMN selected_candidates TEXT NOT NULL DEFAULT '[]'"))
 
 
 def get_db() -> Generator[Session, None, None]:

@@ -9,7 +9,8 @@ Mode = Literal["faithful", "realistic", "both"]
 Scene = Literal["product", "marketing", "ecommerce", "other"]
 Status = Literal["queued", "running", "completed", "failed"]
 RiskLevel = Literal["low", "medium", "high"]
-ResultType = Literal["faithful", "realistic", "sharpened"]
+ResultType = Literal["faithful", "realistic", "sharpened", "swinir", "hat", "material_guard"]
+SelectedCandidate = Literal["faithful", "swinir", "hat"]
 
 ALLOWED_ISSUES = {
     "good",
@@ -93,11 +94,25 @@ class DataGovernanceRead(BaseModel):
     requires_approval_for_training: bool
 
 
+class ModelStatusRead(BaseModel):
+    id: SelectedCandidate
+    label: str
+    backend: str
+    status: Literal["ready", "demo", "disabled", "missing_config"]
+    configured: bool
+    detail: str
+
+
+class ModelStatusListRead(BaseModel):
+    models: List[ModelStatusRead]
+
+
 class JobRead(BaseModel):
     job_id: str
     status: Status
     scale: int
     mode: str
+    selected_candidates: List[SelectedCandidate]
     original_url: str
     warnings: List[str]
     results: List[ResultRead]

@@ -1,20 +1,24 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..config import get_settings
-from ..schemas import BatchCreateResponse, FeedbackCreate, FeedbackRead, JobCreateResponse, JobListRead, JobRead
+from ..schemas import BatchCreateResponse, FeedbackCreate, FeedbackRead, JobCreateResponse, JobListRead, JobRead, ModelStatusListRead
 from .service import (
     create_batch_jobs,
     create_feedback,
     create_job,
+    downloadable_result_path,
+    first_downloadable_result_for_job,
     get_job,
+    get_result,
     list_recent_jobs,
     process_job,
     build_batch_results_zip,
+    build_model_statuses,
     build_batch_evaluation_report,
     build_batch_risk_samples,
     render_evaluation_report_csv,
@@ -29,6 +33,8 @@ from .service import (
 router = APIRouter(prefix="/api/upscale/jobs", tags=["upscale-jobs"])
 batches_router = APIRouter(prefix="/api/upscale/batches", tags=["upscale-batches"])
 reports_router = APIRouter(prefix="/api/upscale/reports", tags=["upscale-reports"])
+models_router = APIRouter(prefix="/api/upscale/models", tags=["upscale-models"])
+results_router = APIRouter(prefix="/api/upscale/results", tags=["upscale-results"])
 
 
 @router.get("", response_model=JobListRead)
@@ -42,9 +48,10 @@ def create_upscale_job(
     scale: int = Form(...),
     mode: str = Form(...),
     scene: str = Form("product"),
+    candidates: List[str] = Form(default=None),
     db: Session = Depends(get_db),
 ) -> JobCreateResponse:
-    job = create_job(db, image=image, scale=scale, mode=mode, scene=scene)
+    job = create_job(db, image=image, scale=scale, mode=mode, scene=scene, selected_candidates=candidates)
     if get_settings().process_inline:
         job = process_job(db, job.id)
     return JobCreateResponse(job_id=job.id, status=job.status, estimated_seconds=90)
@@ -56,9 +63,10 @@ def create_upscale_batch(
     scale: int = Form(...),
     mode: str = Form(...),
     scene: str = Form("product"),
+    candidates: List[str] = Form(default=None),
     db: Session = Depends(get_db),
 ) -> BatchCreateResponse:
-    batch_id, jobs = create_batch_jobs(db, images=images, scale=scale, mode=mode, scene=scene)
+    batch_id, jobs = create_batch_jobs(db, images=images, scale=scale, mode=mode, scene=scene, selected_candidates=candidates)
     if get_settings().process_inline:
         jobs = [process_job(db, job.id) for job in jobs]
     return BatchCreateResponse(
@@ -114,6 +122,11 @@ def download_risk_samples(batch_id: str, format: str = "markdown", db: Session =
     raise HTTPException(status_code=422, detail="format must be markdown or csv")
 
 
+@models_router.get("/status", response_model=ModelStatusListRead)
+def read_model_statuses() -> dict:
+    return build_model_statuses()
+
+
 @router.get("/{job_id}", response_model=JobRead)
 def read_upscale_job(job_id: str, db: Session = Depends(get_db)) -> dict:
     job = get_job(db, job_id)
@@ -124,6 +137,29 @@ def read_upscale_job(job_id: str, db: Session = Depends(get_db)) -> dict:
 def process_upscale_job(job_id: str, db: Session = Depends(get_db)) -> dict:
     job = process_job(db, job_id)
     return serialize_job(job)
+
+
+@router.get("/{job_id}/download")
+def download_job_result(job_id: str, db: Session = Depends(get_db)) -> FileResponse:
+    job = get_job(db, job_id)
+    result = first_downloadable_result_for_job(job)
+    path = downloadable_result_path(result)
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        filename=f"{result.id}{path.suffix}",
+    )
+
+
+@results_router.get("/{result_id}/download")
+def download_result(result_id: str, db: Session = Depends(get_db)) -> FileResponse:
+    result = get_result(db, result_id)
+    path = downloadable_result_path(result)
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        filename=f"{result.id}{path.suffix}",
+    )
 
 
 @router.post("/{job_id}/feedback", response_model=FeedbackRead)

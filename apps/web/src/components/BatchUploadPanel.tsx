@@ -1,19 +1,34 @@
-import { Upload } from "lucide-react";
+import { Settings, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
-import { createBatch, type BatchCreateResponse } from "../lib/api";
+import { createBatch, type BatchCreateResponse, type ModelStatus } from "../lib/api";
+import { CANDIDATE_OPTIONS, DEFAULT_CANDIDATES, orderedCandidates, type SelectableCandidate } from "../lib/candidates";
 import { formatFileSize } from "../lib/presentation";
+import { ModelStatusPanel } from "./ModelStatusPanel";
 
 type Props = {
   onCreated: (batch: BatchCreateResponse) => void;
   onError: (message: string) => void;
+  modelStatuses: ModelStatus[];
+  modelStatusLoading: boolean;
+  modelStatusError: string | null;
+  onRefreshModelStatuses: () => void;
 };
 
-export function BatchUploadPanel({ onCreated, onError }: Props) {
+export function BatchUploadPanel({
+  onCreated,
+  onError,
+  modelStatuses,
+  modelStatusLoading,
+  modelStatusError,
+  onRefreshModelStatuses
+}: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [scale, setScale] = useState("4");
   const [mode, setMode] = useState("faithful");
   const [scene, setScene] = useState("product");
+  const [candidates, setCandidates] = useState<SelectableCandidate[]>(DEFAULT_CANDIDATES);
   const [loading, setLoading] = useState(false);
+  const [showModelStatus, setShowModelStatus] = useState(false);
 
   const validationMessage = useMemo(() => {
     if (files.length === 0) {
@@ -37,6 +52,7 @@ export function BatchUploadPanel({ onCreated, onError }: Props) {
     form.append("scale", scale);
     form.append("mode", mode);
     form.append("scene", scene);
+    orderedCandidates(candidates).forEach((candidate) => form.append("candidates", candidate));
     setLoading(true);
     try {
       onCreated(await createBatch(form));
@@ -45,6 +61,15 @@ export function BatchUploadPanel({ onCreated, onError }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleCandidate(candidate: SelectableCandidate) {
+    setCandidates((current) => {
+      if (current.includes(candidate)) {
+        return current.filter((item) => item !== candidate);
+      }
+      return orderedCandidates([...current, candidate]);
+    });
   }
 
   return (
@@ -109,7 +134,52 @@ export function BatchUploadPanel({ onCreated, onError }: Props) {
           <option value="other">其他</option>
         </select>
       </div>
-      <button className="primary" disabled={Boolean(validationMessage) || loading} onClick={submit} type="button">
+      <div className="field">
+        <div className="field-row">
+          <label>生成模型</label>
+          <button
+            type="button"
+            className={`link-button model-status-toggle ${showModelStatus ? "active" : ""}`}
+            onClick={() => setShowModelStatus((current) => !current)}
+            aria-expanded={showModelStatus}
+          >
+            <Settings size={14} />
+            {showModelStatus ? "收回" : "设置"}
+          </button>
+        </div>
+        <div className="segments">
+          {CANDIDATE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              className={`segment ${candidates.includes(option.value) ? "active" : ""}`}
+              onClick={() => toggleCandidate(option.value)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="inline-actions">
+          <button type="button" className="link-button" onClick={() => setCandidates(CANDIDATE_OPTIONS.map((option) => option.value))}>
+            全选
+          </button>
+          <button type="button" className="link-button" onClick={() => setCandidates(DEFAULT_CANDIDATES)}>
+            默认
+          </button>
+        </div>
+        {showModelStatus ? (
+          <div className="model-status-inline">
+            <ModelStatusPanel
+              models={modelStatuses}
+              loading={modelStatusLoading}
+              error={modelStatusError}
+              onRefresh={onRefreshModelStatuses}
+              compact
+            />
+          </div>
+        ) : null}
+      </div>
+      <button className="primary" disabled={Boolean(validationMessage) || loading || candidates.length === 0} onClick={submit} type="button">
         <Upload size={16} /> {loading ? "创建中" : "创建批量任务"}
       </button>
     </section>

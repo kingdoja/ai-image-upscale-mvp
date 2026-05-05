@@ -14,7 +14,7 @@ export type BatchCreateResponse = {
 
 export type ResultRead = {
   id: string;
-  type: "faithful" | "realistic" | "sharpened";
+  type: "faithful" | "realistic" | "sharpened" | "swinir" | "hat" | "material_guard";
   url: string;
   thumbnail_url: string;
   model_name: string;
@@ -22,6 +22,8 @@ export type ResultRead = {
   quality_score: number;
   risk_level: "low" | "medium" | "high";
 };
+
+export type SelectableCandidate = "faithful" | "swinir" | "hat";
 
 export type ImageUnderstandingRead = {
   controller_version: string;
@@ -74,6 +76,7 @@ export type JobRead = {
   status: "queued" | "running" | "completed" | "failed";
   scale: number;
   mode: string;
+  selected_candidates: SelectableCandidate[];
   original_url: string;
   warnings: string[];
   results: ResultRead[];
@@ -99,6 +102,19 @@ export type JobSummaryRead = {
 
 export type JobListRead = {
   jobs: JobSummaryRead[];
+};
+
+export type ModelStatus = {
+  id: SelectableCandidate;
+  label: string;
+  backend: string;
+  status: "ready" | "demo" | "disabled" | "missing_config";
+  configured: boolean;
+  detail: string;
+};
+
+export type ModelStatusListRead = {
+  models: ModelStatus[];
 };
 
 export async function createJob(formData: FormData): Promise<CreateJobResponse> {
@@ -127,6 +143,14 @@ export function batchDownloadUrl(batchId: string) {
   return `${API_BASE_URL}/api/upscale/batches/${batchId}/download`;
 }
 
+export function resultDownloadUrl(resultId: string) {
+  return `${API_BASE_URL}/api/upscale/results/${resultId}/download`;
+}
+
+export function jobResultDownloadUrl(jobId: string) {
+  return `${API_BASE_URL}/api/upscale/jobs/${jobId}/download`;
+}
+
 export function reportDownloadUrl(batchId: string, format: "markdown" | "csv" = "markdown") {
   return `${API_BASE_URL}/api/upscale/reports/${batchId}?format=${format}`;
 }
@@ -137,6 +161,14 @@ export function riskSamplesDownloadUrl(batchId: string, format: "markdown" | "cs
 
 export async function listJobs(): Promise<JobListRead> {
   const response = await fetch(`${API_BASE_URL}/api/upscale/jobs`);
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function getModelStatuses(): Promise<ModelStatusListRead> {
+  const response = await fetch(`${API_BASE_URL}/api/upscale/models/status`);
   if (!response.ok) {
     throw new Error(await response.text());
   }

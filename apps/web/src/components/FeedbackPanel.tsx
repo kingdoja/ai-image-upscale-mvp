@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { submitFeedback, type JobRead } from "../lib/api";
+import { visibleOrderedResults } from "../lib/candidates";
 
 export const ISSUE_TAGS = [
   ["good", "效果好"],
@@ -50,7 +51,7 @@ export function FeedbackPanel({ job, onSubmitted }: { job: JobRead | null; onSub
             <label htmlFor="result">最佳结果</label>
             <select id="result" value={selectedResultId} onChange={(event) => setSelectedResultId(event.target.value)}>
               <option value="">请选择</option>
-              {job.results.map((result) => (
+              {visibleOrderedResults(job.results).map((result) => (
                 <option value={result.id} key={result.id}>{result.type}</option>
               ))}
             </select>

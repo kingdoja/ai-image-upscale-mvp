@@ -13,18 +13,27 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..inference.base import ModelConfigurationError
 from ..inference.diffusion import DiffusionUpscaleAdapter
+from ..inference.optional_models import DisabledOptionalModelAdapter, ExternalUpscaleAdapter, OptionalModelAdapter
 from ..inference.realesrgan import RealESRGANAdapter
 from ..inference.stub import StubUpscaleAdapter
 from ..models import Feedback, Job, Result, new_id
 from ..quality import evaluate_image
 from ..schemas import ALLOWED_ISSUES, FeedbackCreate
-from ..semantic_controller import build_data_governance_summary, build_semantic_context, create_upscale_plan, understand_image
+from ..semantic_controller import (
+    CANDIDATE_DISPLAY_ORDER,
+    DEFAULT_SELECTED_CANDIDATES,
+    build_data_governance_summary,
+    build_semantic_context,
+    create_upscale_plan,
+    understand_image,
+)
 from ..storage import create_thumbnail, result_path, save_upload, thumbnail_path
 
 
 VALID_SCALES = {2, 4}
 VALID_MODES = {"faithful", "realistic", "both"}
 VALID_SCENES = {"product", "marketing", "ecommerce", "other"}
+VALID_SELECTED_CANDIDATES = {"faithful", "swinir", "hat"}
 
 
 def _validate_job_options(scale: int, mode: str, scene: str) -> None:
@@ -36,6 +45,95 @@ def _validate_job_options(scale: int, mode: str, scene: str) -> None:
         raise HTTPException(status_code=422, detail="scene must be product, marketing, ecommerce, or other")
 
 
+def normalize_selected_candidates(selected_candidates: Optional[List[str]]) -> List[str]:
+    if selected_candidates is None:
+        return []
+    candidates = selected_candidates or []
+    normalized = [candidate.strip().lower() for candidate in candidates if candidate and candidate.strip()]
+    if not normalized:
+        return []
+    invalid = sorted(set(normalized) - VALID_SELECTED_CANDIDATES)
+    if invalid:
+        raise HTTPException(status_code=422, detail=f"candidates contains unsupported values: {', '.join(invalid)}")
+    unique = list(dict.fromkeys(normalized))
+    return sorted(unique, key=lambda candidate_type: CANDIDATE_DISPLAY_ORDER.index(candidate_type))
+
+
+def _path_exists(path_value: str) -> bool:
+    return bool(path_value) and Path(path_value).exists()
+
+
+def build_model_statuses() -> dict:
+    settings = get_settings()
+    models = []
+    if settings.faithful_backend == "realesrgan":
+        executable_ready = _path_exists(settings.realesrgan_executable)
+        model_dir_ready = _path_exists(settings.realesrgan_model_path)
+        model_file_ready = bool(settings.realesrgan_model_path) and (
+            Path(settings.realesrgan_model_path) / f"{settings.realesrgan_model}.param"
+        ).exists()
+        ready = executable_ready and model_dir_ready and model_file_ready
+        models.append(
+            {
+                "id": "faithful",
+                "label": "Real-ESRGAN",
+                "backend": settings.faithful_backend,
+                "status": "ready" if ready else "missing_config",
+                "configured": ready,
+                "detail": "Real-ESRGAN x4plus is ready" if ready else "Real-ESRGAN executable or model files are missing",
+            }
+        )
+    else:
+        models.append(
+            {
+                "id": "faithful",
+                "label": "Real-ESRGAN",
+                "backend": settings.faithful_backend,
+                "status": "demo",
+                "configured": True,
+                "detail": "Using local demo stub; set UPSCALE_FAITHFUL_BACKEND=realesrgan for the real model",
+            }
+        )
+
+    for model_id, label, backend, command, model_path, repo_path in [
+        (
+            "swinir",
+            "SwinIR",
+            settings.swinir_backend,
+            settings.swinir_command,
+            settings.swinir_model_path,
+            settings.swinir_repo_path,
+        ),
+        (
+            "hat",
+            "HAT",
+            settings.hat_backend,
+            settings.hat_command,
+            settings.hat_model_path,
+            settings.hat_repo_path,
+        ),
+    ]:
+        if backend == "disabled":
+            status = "disabled"
+            configured = False
+            detail = f"{label} backend is disabled"
+        else:
+            configured = bool(command) and _path_exists(model_path) and _path_exists(repo_path)
+            status = "ready" if configured else "missing_config"
+            detail = f"{label} external backend is ready" if configured else f"{label} command, weights, or repo path are missing"
+        models.append(
+            {
+                "id": model_id,
+                "label": label,
+                "backend": backend,
+                "status": status,
+                "configured": configured,
+                "detail": detail,
+            }
+        )
+    return {"models": models}
+
+
 def create_job(
     db: Session,
     *,
@@ -43,9 +141,11 @@ def create_job(
     scale: int,
     mode: str,
     scene: str = "product",
+    selected_candidates: Optional[List[str]] = None,
     uploader_id: str = "local-user",
 ) -> Job:
     _validate_job_options(scale, mode, scene)
+    normalized_candidates = normalize_selected_candidates(selected_candidates)
     job_id = new_id("up")
     stored = save_upload(image, job_id)
     warnings = []
@@ -62,6 +162,7 @@ def create_job(
         status="queued",
     )
     job.warnings = warnings
+    job.selected_candidates = normalized_candidates
     db.add(job)
     db.commit()
     db.refresh(job)
@@ -76,6 +177,7 @@ def create_batch_jobs(
     scale: int,
     mode: str,
     scene: str = "product",
+    selected_candidates: Optional[List[str]] = None,
     uploader_id: str = "local-user",
 ) -> Tuple[str, List[Job]]:
     if not images:
@@ -88,6 +190,7 @@ def create_batch_jobs(
             scale=scale,
             mode=mode,
             scene=scene,
+            selected_candidates=selected_candidates,
             uploader_id=uploader_id,
         )
         for image in images
@@ -202,6 +305,7 @@ def _build_semantic_payload(job: Job, executed_candidate_types: Optional[List[st
         Path(job.original_file_path),
         scene=job.scene,
         requested_mode=job.mode,
+        selected_candidates=job.selected_candidates or None,
     )
     return {
         "job_id": job.id,
@@ -550,6 +654,27 @@ def get_job(db: Session, job_id: str) -> Job:
     return job
 
 
+def get_result(db: Session, result_id: str) -> Result:
+    result = db.get(Result, result_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Result not found")
+    return result
+
+
+def downloadable_result_path(result: Result) -> Path:
+    path = Path(result.file_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Result file not found")
+    return path
+
+
+def first_downloadable_result_for_job(job: Job) -> Result:
+    ordered_results = _ordered_results(job.results)
+    if not ordered_results:
+        raise HTTPException(status_code=404, detail="No completed results are available for this job")
+    return ordered_results[0]
+
+
 def list_recent_jobs(db: Session, limit: int = 20) -> List[Job]:
     return (
         db.query(Job)
@@ -569,12 +694,14 @@ def _public_path(path: str) -> str:
 
 
 def serialize_job(job: Job) -> dict:
+    ordered_results = _ordered_results(job.results)
     semantic_payload = _semantic_payload_for_job(job)
     return {
         "job_id": job.id,
         "status": job.status,
         "scale": job.scale,
         "mode": job.mode,
+        "selected_candidates": job.selected_candidates,
         "original_url": _public_path(job.original_file_path),
         "warnings": job.warnings,
         "results": [
@@ -588,7 +715,7 @@ def serialize_job(job: Job) -> dict:
                 "quality_score": result.quality_score,
                 "risk_level": result.risk_level,
             }
-            for result in job.results
+            for result in ordered_results
         ],
         "understanding": semantic_payload["understanding"],
         "upscale_plan": semantic_payload["upscale_plan"],
@@ -604,8 +731,9 @@ def serialize_job_summary(job: Job) -> dict:
         risk_level = max((result.risk_level for result in job.results), key=lambda value: risk_order.get(value, 0))
     elif job.warnings:
         risk_level = "medium"
-    thumbnail_url = _public_path(job.results[0].thumbnail_path) if job.results else None
-    result_url = _public_path(job.results[0].file_path) if job.results else None
+    ordered_results = _ordered_results(job.results)
+    thumbnail_url = _public_path(ordered_results[0].thumbnail_path) if ordered_results else None
+    result_url = _public_path(ordered_results[0].file_path) if ordered_results else None
     return {
         "job_id": job.id,
         "status": job.status,
@@ -623,9 +751,13 @@ def serialize_job_summary(job: Job) -> dict:
 
 def _enabled_candidate_types() -> set:
     settings = get_settings()
-    enabled = {"faithful", "sharpened"}
+    enabled = {"faithful"}
     if settings.realistic_backend != "disabled":
         enabled.add("realistic")
+    if settings.swinir_backend != "disabled":
+        enabled.add("swinir")
+    if settings.hat_backend != "disabled":
+        enabled.add("hat")
     return enabled
 
 
@@ -646,13 +778,44 @@ def _adapters_for_candidates(candidate_types: Iterable[str]) -> Iterable[Tuple[s
                 )
             else:
                 yield "faithful", StubUpscaleAdapter(sharpen=True)
-        elif candidate_type == "sharpened":
-            yield "sharpened", StubUpscaleAdapter(sharpen=True)
         elif candidate_type == "realistic":
             if settings.realistic_backend == "stub":
                 yield "realistic", StubUpscaleAdapter(sharpen=True)
             elif settings.realistic_backend != "disabled":
                 yield "realistic", DiffusionUpscaleAdapter()
+        elif candidate_type == "swinir":
+            if settings.swinir_backend == "external":
+                yield "swinir", ExternalUpscaleAdapter(
+                    model_name="swinir",
+                    model_version="external",
+                    command=settings.swinir_command,
+                    model_path=Path(settings.swinir_model_path) if settings.swinir_model_path else None,
+                    extra_args=["--repo-path", settings.swinir_repo_path] if settings.swinir_repo_path else [],
+                    timeout_seconds=settings.swinir_timeout_seconds,
+                )
+            else:
+                yield "swinir", DisabledOptionalModelAdapter("swinir")
+        elif candidate_type == "hat":
+            if settings.hat_backend == "external":
+                yield "hat", ExternalUpscaleAdapter(
+                    model_name="hat",
+                    model_version="external",
+                    command=settings.hat_command,
+                    model_path=Path(settings.hat_model_path) if settings.hat_model_path else None,
+                    extra_args=["--repo-path", settings.hat_repo_path] if settings.hat_repo_path else [],
+                    timeout_seconds=settings.hat_timeout_seconds,
+                )
+            else:
+                yield "hat", DisabledOptionalModelAdapter("hat")
+
+
+def _ordered_results(results: Iterable[Result]) -> List[Result]:
+    return sorted(
+        results,
+        key=lambda result: CANDIDATE_DISPLAY_ORDER.index(result.result_type)
+        if result.result_type in CANDIDATE_DISPLAY_ORDER
+        else len(CANDIDATE_DISPLAY_ORDER),
+    )
 
 
 def process_job(db: Session, job_id: str) -> Job:
@@ -667,7 +830,7 @@ def process_job(db: Session, job_id: str) -> Job:
         created_results = 0
         input_path = Path(job.original_file_path)
         understanding = understand_image(input_path, scene=job.scene)
-        plan = create_upscale_plan(understanding, requested_mode=job.mode)
+        plan = create_upscale_plan(understanding, requested_mode=job.mode, selected_candidates=job.selected_candidates or None)
         job.warnings = sorted(set(job.warnings + plan.warnings))
         for result_type, adapter in _adapters_for_candidates(plan.candidate_types):
             result_id = new_id("res")

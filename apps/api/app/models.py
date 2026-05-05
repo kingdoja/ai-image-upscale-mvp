@@ -38,6 +38,7 @@ class Job(Base, JsonListMixin):
     scene = Column(String(32), nullable=False, default="product")
     status = Column(String(32), nullable=False, default="queued", index=True)
     warnings_json = Column("warnings", Text, nullable=False, default="[]")
+    selected_candidates_json = Column("selected_candidates", Text, nullable=False, default="[]")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -51,6 +52,14 @@ class Job(Base, JsonListMixin):
     @warnings.setter
     def warnings(self, values: List[str]) -> None:
         self.warnings_json = self.encode_list(values)
+
+    @property
+    def selected_candidates(self) -> List[str]:
+        return self.decode_list(self.selected_candidates_json)
+
+    @selected_candidates.setter
+    def selected_candidates(self, values: List[str]) -> None:
+        self.selected_candidates_json = self.encode_list(values)
 
 
 class Result(Base):

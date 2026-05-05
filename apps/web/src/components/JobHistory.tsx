@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Filter, History, XCircle } from "lucide-react";
-import { assetUrl } from "../lib/api";
+import { assetUrl, jobResultDownloadUrl } from "../lib/api";
 import type { JobSummaryRead } from "../lib/api";
 import { modeLabel, riskLabel, statusLabel } from "../lib/presentation";
 
@@ -107,7 +107,7 @@ export function JobHistory({ jobs, activeJobId, onSelect, onProcess, onClearSele
             </button>
             <div className="history-actions">
               {job.status === "completed" && job.result_url ? (
-                <a className="secondary small-link-button" href={assetUrl(job.result_url)} download>
+                <a className="secondary small-link-button" href={jobResultDownloadUrl(job.job_id)}>
                   下载结果
                 </a>
               ) : null}

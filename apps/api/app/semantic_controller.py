@@ -8,7 +8,10 @@ from .config import get_settings
 from .vision_regions import VisionRegion, detect_protected_regions
 
 
-CandidateType = Literal["faithful", "realistic", "sharpened"]
+CandidateType = Literal["faithful", "realistic", "swinir", "hat"]
+SelectableCandidateType = Literal["faithful", "swinir", "hat"]
+DEFAULT_SELECTED_CANDIDATES: List[SelectableCandidateType] = ["faithful", "swinir", "hat"]
+CANDIDATE_DISPLAY_ORDER = ["faithful", "swinir", "hat", "realistic"]
 CONTROLLER_VERSION = "semantic-controller-v0.10.0"
 ROUTING_POLICY_VERSION = "routing-policy-v0.10.0"
 
@@ -78,19 +81,27 @@ def get_model_capability_registry() -> Dict[str, ModelCapability]:
             expected_latency="medium",
             requires_manual_review=False,
         ),
-        "sharpened": ModelCapability(
-            candidate_type="sharpened",
-            strengths=["fast_fallback", "local_demo_available"],
-            limitations=["not_a_true_model_result", "may_oversharpen"],
-            hallucination_risk="low",
-            expected_latency="low",
-            requires_manual_review=True,
-        ),
         "realistic": ModelCapability(
             candidate_type="realistic",
             strengths=["photo_realistic_detail_recovery", "material_texture_enhancement"],
             limitations=["higher_hallucination_risk", "slower_runtime", "requires_review_for_brand_assets"],
             hallucination_risk="high",
+            expected_latency="high",
+            requires_manual_review=True,
+        ),
+        "swinir": ModelCapability(
+            candidate_type="swinir",
+            strengths=["transformer_sr_baseline", "detail_reconstruction_comparison"],
+            limitations=["optional_runtime_not_bundled", "requires_configured_weights"],
+            hallucination_risk="medium",
+            expected_latency="high",
+            requires_manual_review=True,
+        ),
+        "hat": ModelCapability(
+            candidate_type="hat",
+            strengths=["strong_transformer_sr_baseline", "fine_detail_comparison"],
+            limitations=["optional_runtime_not_bundled", "requires_configured_weights"],
+            hallucination_risk="medium",
             expected_latency="high",
             requires_manual_review=True,
         ),
@@ -201,17 +212,29 @@ def understand_image(input_path: Path, *, scene: str) -> ImageUnderstandingRepor
     )
 
 
-def create_upscale_plan(report: ImageUnderstandingReport, *, requested_mode: str) -> UpscalePlan:
+def _ordered_candidates(candidate_types: List[str]) -> List[CandidateType]:
+    unique = list(dict.fromkeys(candidate_types))
+    return sorted(unique, key=lambda candidate_type: CANDIDATE_DISPLAY_ORDER.index(candidate_type))
+
+
+def create_upscale_plan(
+    report: ImageUnderstandingReport,
+    *,
+    requested_mode: str,
+    selected_candidates: Optional[List[SelectableCandidateType]] = None,
+) -> UpscalePlan:
     if requested_mode == "faithful":
-        candidate_types: List[CandidateType] = ["faithful", "sharpened"]
+        candidate_types: List[CandidateType] = ["faithful"]
     elif requested_mode == "both":
-        candidate_types = ["faithful", "sharpened", "realistic"]
+        candidate_types = ["faithful", "realistic", "swinir", "hat"]
     elif requested_mode == "realistic" and report.review_required:
         candidate_types = ["faithful", "realistic"]
     elif requested_mode == "realistic":
-        candidate_types = ["realistic", "sharpened"]
+        candidate_types = ["realistic"]
     else:
-        candidate_types = ["faithful", "sharpened"]
+        candidate_types = ["faithful"]
+    if selected_candidates is not None:
+        candidate_types = _ordered_candidates(selected_candidates)
 
     protected_regions: List[str] = []
     protected_region_details: List[ProtectedRegionDetail] = []
@@ -256,12 +279,18 @@ def build_routing_decision(plan: UpscalePlan, *, requested_mode: str) -> Routing
     )
 
 
-def build_semantic_context(input_path: Path, *, scene: str, requested_mode: str) -> Tuple[
+def build_semantic_context(
+    input_path: Path,
+    *,
+    scene: str,
+    requested_mode: str,
+    selected_candidates: Optional[List[SelectableCandidateType]] = None,
+) -> Tuple[
     ImageUnderstandingReport,
     UpscalePlan,
     RoutingDecision,
 ]:
     report = understand_image(input_path, scene=scene)
-    plan = create_upscale_plan(report, requested_mode=requested_mode)
+    plan = create_upscale_plan(report, requested_mode=requested_mode, selected_candidates=selected_candidates)
     routing = build_routing_decision(plan, requested_mode=requested_mode)
     return report, plan, routing

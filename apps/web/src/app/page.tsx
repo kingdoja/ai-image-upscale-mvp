@@ -24,12 +24,14 @@ import { Uploader } from "../components/Uploader";
 import {
   batchDownloadUrl,
   getJob,
+  getModelStatuses,
   listJobs,
   processJob,
   reportDownloadUrl,
   riskSamplesDownloadUrl,
   type JobRead,
-  type JobSummaryRead
+  type JobSummaryRead,
+  type ModelStatus
 } from "../lib/api";
 import { statusLabel } from "../lib/presentation";
 
@@ -72,6 +74,9 @@ export default function Page() {
   const [message, setMessage] = useState("等待上传图片");
   const [preview, setPreview] = useState<PreviewImage | null>(null);
   const [history, setHistory] = useState<JobSummaryRead[]>([]);
+  const [modelStatuses, setModelStatuses] = useState<ModelStatus[]>([]);
+  const [modelStatusLoading, setModelStatusLoading] = useState(false);
+  const [modelStatusError, setModelStatusError] = useState<string | null>(null);
   const [lastBatchId, setLastBatchId] = useState<string | null>(null);
   const [view, setView] = useState<ViewName>("workspace");
   const activeView = viewMeta[view];
@@ -86,6 +91,19 @@ export default function Page() {
   async function refreshHistory() {
     const list = await listJobs();
     setHistory(list.jobs);
+  }
+
+  async function refreshModelStatuses() {
+    setModelStatusLoading(true);
+    setModelStatusError(null);
+    try {
+      const payload = await getModelStatuses();
+      setModelStatuses(payload.models);
+    } catch {
+      setModelStatusError("模型配置状态读取失败，请确认后端服务是否启动。");
+    } finally {
+      setModelStatusLoading(false);
+    }
   }
 
   async function selectHistoryJob(jobId: string) {
@@ -131,6 +149,7 @@ export default function Page() {
   }
 
   useEffect(() => {
+    refreshModelStatuses();
     const lastJobId = window.localStorage.getItem("ai-upscale-last-job-id");
     if (!lastJobId) {
       const historyTimer = window.setTimeout(() => {
@@ -297,6 +316,10 @@ export default function Page() {
                     .then(() => refreshHistory())
                     .catch(() => setMessage("任务查询失败"));
                 }}
+                modelStatuses={modelStatuses}
+                modelStatusLoading={modelStatusLoading}
+                modelStatusError={modelStatusError}
+                onRefreshModelStatuses={() => refreshModelStatuses()}
               />
               <JobStatus
                 job={job}
@@ -354,6 +377,10 @@ export default function Page() {
                     .then(() => setView("history"))
                     .catch(() => setMessage("批量任务已创建，但历史任务加载失败"));
                 }}
+                modelStatuses={modelStatuses}
+                modelStatusLoading={modelStatusLoading}
+                modelStatusError={modelStatusError}
+                onRefreshModelStatuses={() => refreshModelStatuses()}
               />
             </div>
             <div className="panel">

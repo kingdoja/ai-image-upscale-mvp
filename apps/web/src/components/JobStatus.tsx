@@ -1,5 +1,6 @@
 import { CircleDashed, Play, ShieldAlert } from "lucide-react";
 import type { JobRead } from "../lib/api";
+import { visibleOrderedCandidateTypes } from "../lib/candidates";
 import { modeLabel, resultTypeLabel, semanticLabel, statusLabel, warningLabel } from "../lib/presentation";
 
 type Props = {
@@ -63,18 +64,11 @@ export function JobStatus({ job, onProcess }: Props) {
         <div className="semantic-grid">
           <section>
             <span>图像理解</span>
-            <p>
-              {[...job.understanding.degradation_types, ...job.understanding.subject_hints]
-                .map(semanticLabel)
-                .join(" / ")}
-            </p>
+            <p>{[...job.understanding.degradation_types, ...job.understanding.subject_hints].map(semanticLabel).join(" / ")}</p>
           </section>
           <section>
             <span>修复计划</span>
-            <p>
-              {job.upscale_plan.candidate_types.map(resultTypeLabel).join(" / ")} ·{" "}
-              {semanticLabel(job.upscale_plan.enhancement_policy)}
-            </p>
+            <p>{visibleOrderedCandidateTypes(job.upscale_plan.candidate_types).map(resultTypeLabel).join(" / ")} · {semanticLabel(job.upscale_plan.enhancement_policy)}</p>
           </section>
           <section>
             <span>路由原因</span>
@@ -82,9 +76,7 @@ export function JobStatus({ job, onProcess }: Props) {
           </section>
           <section>
             <span>数据治理</span>
-            <p>
-              {semanticLabel(job.data_governance.usage_scope)} · {semanticLabel(job.data_governance.training_state)}
-            </p>
+            <p>{semanticLabel(job.data_governance.usage_scope)} · {semanticLabel(job.data_governance.training_state)}</p>
           </section>
         </div>
         {job.upscale_plan.protected_regions.length > 0 ? (
@@ -101,7 +93,7 @@ export function JobStatus({ job, onProcess }: Props) {
         {job.routing_decision.skipped_candidate_types.length > 0 ? (
           <p className="semantic-note">
             未生成候选：
-            {job.routing_decision.skipped_candidate_types
+            {visibleOrderedCandidateTypes(job.routing_decision.skipped_candidate_types)
               .map((type) => `${resultTypeLabel(type)}（${semanticLabel(job.routing_decision.skip_reasons[type] ?? "")}）`)
               .join("；")}
           </p>
