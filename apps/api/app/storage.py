@@ -54,13 +54,16 @@ def _dated_path(root: Path, category: str, identifier: str, extension: str) -> P
 def save_upload(upload: UploadFile, job_id: str, root: Optional[Path] = None) -> StoredUpload:
     storage_root = root or get_settings().storage_root
     ensure_storage_dirs(storage_root)
-    data = upload.file.read()
-    ext = validate_upload_metadata(upload.filename or "", upload.content_type, len(data))
-    digest = hashlib.sha256(data).hexdigest()
-    destination = _dated_path(storage_root, "originals", job_id, ext)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_bytes(data)
-    return StoredUpload(path=destination, sha256=digest, extension=ext, size_bytes=len(data))
+    try:
+        data = upload.file.read()
+        ext = validate_upload_metadata(upload.filename or "", upload.content_type, len(data))
+        digest = hashlib.sha256(data).hexdigest()
+        destination = _dated_path(storage_root, "originals", job_id, ext)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(data)
+        return StoredUpload(path=destination, sha256=digest, extension=ext, size_bytes=len(data))
+    finally:
+        upload.file.close()
 
 
 def result_path(result_id: str, root: Optional[Path] = None) -> Path:

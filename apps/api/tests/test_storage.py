@@ -18,6 +18,14 @@ def test_save_upload_accepts_valid_png(sample_image_bytes, temp_storage):
     assert len(stored.sha256) == 64
 
 
+def test_save_upload_closes_uploaded_file_after_persisting(sample_image_bytes, temp_storage):
+    upload = upload_file("product.png", "image/png", sample_image_bytes)
+
+    save_upload(upload, "up_test", temp_storage)
+
+    assert upload.file.closed
+
+
 def test_validate_upload_rejects_bad_extension():
     with pytest.raises(HTTPException) as exc:
         validate_upload_metadata("product.txt", "text/plain", 10)

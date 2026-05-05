@@ -149,13 +149,18 @@ export default function Page() {
   }
 
   useEffect(() => {
-    refreshModelStatuses();
+    const modelStatusTimer = window.setTimeout(() => {
+      refreshModelStatuses().catch(() => undefined);
+    }, 0);
     const lastJobId = window.localStorage.getItem("ai-upscale-last-job-id");
     if (!lastJobId) {
       const historyTimer = window.setTimeout(() => {
         refreshHistory().catch(() => setMessage("历史任务加载失败，请确认后端服务是否启动"));
       }, 0);
-      return () => window.clearTimeout(historyTimer);
+      return () => {
+        window.clearTimeout(modelStatusTimer);
+        window.clearTimeout(historyTimer);
+      };
     }
     const timer = window.setTimeout(() => {
       setLastBatchId(window.localStorage.getItem("ai-upscale-last-batch-id"));
@@ -167,7 +172,10 @@ export default function Page() {
           setMessage("最近任务恢复失败，请重新上传");
         });
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(modelStatusTimer);
+      window.clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
